@@ -15,7 +15,6 @@ import java.awt.event.KeyListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.*;
-import java.net.MalformedURLException;
 
 public class PrairieStory extends JFrame implements KeyListener {
     private static Field field;
@@ -32,11 +31,11 @@ public class PrairieStory extends JFrame implements KeyListener {
     private Actor actor;
     private static AudioClip audioClip;
 
-    public PrairieStory(boolean flag) {
+    public PrairieStory(boolean isNewGame) {
         Dimension d = Toolkit.getDefaultToolkit().getScreenSize();
         x = (int) (d.getWidth() * .9);
         y = (int) (d.getHeight() * .9);
-        if (flag) {
+        if (isNewGame) {
             actor = new Actor();
             field = new Field(x / GRID_SIZE, (y - 70) / GRID_SIZE);
             //初始化
@@ -47,25 +46,22 @@ public class PrairieStory extends JFrame implements KeyListener {
             init();
             field.initAudio();
         }
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                while (true) {
-                    if (!actor.move().equals(actor.getLocation())) {//如果没有操作,则不执行
-                        if (field.actorMove(actor, actor.move())) {
-                            actorTips();
-                        } else {
-                            if (!theView.isDie()) {
-                                theView.die();
-                            }
-                            theView.repaint();
+        new Thread(() -> {
+            while (true) {
+                if (!actor.move().equals(actor.getLocation())) {//如果没有操作,则不执行
+                    if (field.actorMove(actor, actor.move())) {
+                        actorTips();
+                    } else {
+                        if (!theView.isDie()) {
+                            theView.die();
                         }
+                        theView.repaint();
                     }
-                    try {
-                        Thread.sleep(speed);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
+                }
+                try {
+                    Thread.sleep(speed);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
                 }
             }
         }).start();
@@ -103,9 +99,9 @@ public class PrairieStory extends JFrame implements KeyListener {
 
     public void init() {
         try {
-            audioClip = Applet.newAudioClip(new File("resource/背景音乐.wav").toURI().toURL());
+            audioClip = Applet.newAudioClip(this.getClass().getResource("/resource/背景音乐.wav"));
             audioClip.loop();
-        } catch (MalformedURLException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
         addKeyListener(this);

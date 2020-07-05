@@ -7,24 +7,22 @@ import model.biology.animal.Wolf;
 
 import java.applet.Applet;
 import java.applet.AudioClip;
-import java.io.File;
-import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.HashSet;
 
 public class Step {
     private Field field;
-    private AudioClip audio1;//惨叫声
-    private AudioClip audio2;//肚子好饿周星驰
-    private AudioClip audio3;//婴儿开心笑声
+    private AudioClip screech;//惨叫声
+    private AudioClip hungry;//肚子好饿周星驰
+    private AudioClip laughter;//婴儿开心笑声
 
     public Step(Field field) {
         this.field = field;
         try {
-            audio1 = Applet.newAudioClip(new File("resource/惨叫声.wav").toURI().toURL());
-            audio2 = Applet.newAudioClip(new File("resource/肚子好饿周星驰.wav").toURI().toURL());
-            audio3 = Applet.newAudioClip(new File("resource/婴儿开心笑声.wav").toURI().toURL());
-        } catch (MalformedURLException e) {
+            screech = Applet.newAudioClip(this.getClass().getResource("/resource/惨叫声.wav"));
+            hungry = Applet.newAudioClip(this.getClass().getResource("/resource/肚子好饿周星驰.wav"));
+            laughter = Applet.newAudioClip(this.getClass().getResource("/resource/婴儿开心笑声.wav"));
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
@@ -62,7 +60,7 @@ public class Step {
                                     if (prey instanceof Human) {
                                         wolf.huntHumanFlag = true;
                                         if (prey instanceof Actor) {
-                                            audio1.play();
+                                            screech.play();
                                         }
                                     }
                                     field.eat(animal, prey);
@@ -107,14 +105,14 @@ public class Step {
                     if (baby != null) {
                         field.placeRandomAdj(row, col, baby);
                         if (isContains.add(baby)) {
-                            if (audio3 != null) {
-                                audio3.stop();
+                            if (laughter != null) {
+                                laughter.stop();
                             }
-                            audio3.play();
+                            laughter.play();
                         }
                     }
                     if (((Actor) animal).getTime() == 1) {
-                        audio2.play();
+                        hungry.play();
                     }
                 }
             } else {//如果是植物
@@ -132,8 +130,8 @@ public class Step {
     }
 
     public void stopAudio() {
-        audio1.stop();
-        audio2.stop();
-        audio3.stop();
+        screech.stop();
+        hungry.stop();
+        laughter.stop();
     }
 }

@@ -37,9 +37,9 @@ public class Field implements Serializable {
         this.height = height;
         field = new Cell[height][width];
         try {
-            wolfAudio = Applet.newAudioClip(new File("resource/狼叫声.wav").toURI().toURL());
-            sheepAudio = Applet.newAudioClip(new File("resource/羊叫声.wav").toURI().toURL());
-        } catch (MalformedURLException e) {
+            wolfAudio = Applet.newAudioClip(this.getClass().getResource("/resource/狼叫声.wav"));
+            sheepAudio = Applet.newAudioClip(this.getClass().getResource("/resource/羊叫声.wav"));
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
