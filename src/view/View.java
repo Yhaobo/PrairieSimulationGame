@@ -5,7 +5,7 @@ import model.Cell;
 import model.Field;
 import model.biology.animal.Human;
 import model.biology.animal.Wolf;
-import model.biology.plant.Grass;
+import model.biology.plant.Plant;
 
 import javax.swing.*;
 import java.awt.*;
@@ -68,10 +68,10 @@ public class View extends JPanel {
             }
             for (int row = 0; row < theField.getHeight(); row++) {
                 for (int col = 0; col < theField.getWidth(); col++) {
-                    Cell cell = theField.get(row, col);
+                    Cell cell = theField.getCell(row, col);
                     if (cell != null) {
                         cell.draw(g, col * GRID_SIZE, row * GRID_SIZE, GRID_SIZE);
-                        if (cell instanceof Grass) {
+                        if (cell instanceof Plant) {
                             grass++;
                         } else if (cell instanceof Human) {
                             if (cell instanceof Actor) {//添加十字线来标示actor

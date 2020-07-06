@@ -2,33 +2,31 @@ package model.biology.animal;
 
 import model.Location;
 import model.biology.Biology;
-import model.biology.plant.Grass;
+import model.biology.plant.Plant;
 
 import java.awt.*;
 import java.util.ArrayList;
 
 public class Human extends Animal {
-    public static  long LIFE_TIME = 80 * 365/2;
-    private static final double probability = 1;
-    private int alpha;
+    private static final double PROBABILITY = 1;
     private boolean hero = false;
 
     public Human() {
-        super(15, 16 * 365/2);
+        this(80 * 365 / 2);
     }
 
-    public Human(int age) {
-        super(age + 15, 16 * 365/2);
-        this.age = age;
+    public Human(int aliveTime,int maxLifetime) {
+        super(aliveTime, aliveTime + 15, 16 * 365 / 2, maxLifetime);
+    }
+
+    public Human(int maxLifetime) {
+        this(0,maxLifetime);
     }
 
     @Override
     public void draw(Graphics g, int x, int y, int size) {
-
-        alpha = (int) ((1 - getAgePercent()) * 255);
-//        int alpha = 255;
         if (!hero) {
-            g.setColor(new Color(255, 0, 0, alpha));
+            g.setColor(new Color(255, 0, 0, (int) (getRemainTimePercent() * 255)));
         } else {
             g.setColor(Color.WHITE);
         }
@@ -38,59 +36,43 @@ public class Human extends Animal {
     @Override
     public Animal breed() {
         Animal ret = null;
-        if (isBreedable() && Math.random() < probability) {
+        if (isReproducible() && Math.random() < PROBABILITY) {
             ret = new Human();
         }
         return ret;
     }
 
     @Override
-    public Biology feed(ArrayList<Biology> neighbour) {
+    public boolean isReproducible() {
+        return aliveTime >= adultTime && (aliveTime % 365 == 0);
+    }
+
+    @Override
+    public Biology eat(ArrayList<Biology> neighbour) {
         Biology ret = null;
         ArrayList<Biology> list = new ArrayList<>();
         for (Biology i : neighbour) {
-//			if(i instanceof Human) {
-//			}else {
-//				list.add(i);
-//			}
-            if (i instanceof Wolf || i instanceof Sheep || i instanceof Grass) {
+            if (i instanceof Wolf || i instanceof Sheep || i instanceof Plant) {
                 list.add(i);
             }
-//			if(i instanceof Sheep) {
-//				list.add(i);
-//			}
-//			if(i instanceof Grass) {
-//				list.add(i);
-//			}
-//			if(i instanceof Fox) {
-//				list.add(i);
-//			}
         }
         if (!list.isEmpty()) {
-            ret = list.get((int) (Math.random() * list.size()));//随机获取一只
+            //随机获取一只
+            ret = list.get((int) (Math.random() * list.size()));
             if (ret instanceof Wolf) {
-                longerLife(365, LIFE_TIME);
-                super.setBreedableAge(0);
+                maxAliveTime += 365;
+                super.setAdultAge(0);
                 hero = true;
             } else if (ret instanceof Sheep) {
-                longerLife(30, LIFE_TIME);
+                maxAliveTime += 30;
             } else {
-                longerLife(2, LIFE_TIME);
+                maxAliveTime += 2;
             }
         }
         return ret;
     }
 
     @Override
-    public void grow() {
-        age++;
-        if (age >= ageLimit) {
-            die();
-        } else if (age >= LIFE_TIME) {
-            die();
-        }
-    }
-
     public Location move(Location[] freeAdj) {
         Location ret = null;
         if (freeAdj.length > 0 && Math.random() < 0.5) {

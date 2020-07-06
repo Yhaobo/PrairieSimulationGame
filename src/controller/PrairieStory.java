@@ -1,25 +1,22 @@
 package controller;
 
-import model.Actor;
 import model.Field;
-import model.Location;
-import model.Step;
+import model.Round;
 import view.View;
 
 import javax.swing.*;
 import java.applet.Applet;
 import java.applet.AudioClip;
 import java.awt.*;
-import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.*;
 
-public class PrairieStory extends JFrame implements KeyListener {
+//public class PrairieStory extends JFrame implements KeyListener {
+public class PrairieStory extends JFrame {
     private static Field field;
     private View theView;
-    private Step step;
+    private Round round;
     private JLabel label;
     private static File archive = new File("存档.data");
     private boolean pause = true;
@@ -28,7 +25,7 @@ public class PrairieStory extends JFrame implements KeyListener {
     private int x;
     private int y;
     private static final byte GRID_SIZE = 10;
-    private Actor actor;
+    //    private Actor actor;
     private static AudioClip audioClip;
 
     public PrairieStory(boolean isNewGame) {
@@ -36,35 +33,44 @@ public class PrairieStory extends JFrame implements KeyListener {
         x = (int) (d.getWidth() * .9);
         y = (int) (d.getHeight() * .9);
         if (isNewGame) {
-            actor = new Actor();
+//            actor = new Actor();
             field = new Field(x / GRID_SIZE, (y - 70) / GRID_SIZE);
             //初始化
-            field.init(actor);
+            field.init();
             init();
         } else {
-            actor = field.getActor();
+//            actor = field.getActor();
             init();
             field.initAudio();
         }
-        new Thread(() -> {
-            while (true) {
-                if (!actor.move().equals(actor.getLocation())) {//如果没有操作,则不执行
-                    if (field.actorMove(actor, actor.move())) {
-                        actorTips();
-                    } else {
-                        if (!theView.isDie()) {
-                            theView.die();
-                        }
-                        theView.repaint();
-                    }
-                }
-                try {
-                    Thread.sleep(speed);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+
+//        while (actor.isAlive()) {
+//            if (!actor.move().equals(actor.getLocation())) {
+//                //如果没有操作,则不执行
+//                if (field.actorMove(actor, actor.move())) {
+//                    actorAction();
+//                } else {
+//                    if (!theView.isDie()) {
+//                        theView.die();
+//                    }
+//                    theView.repaint();
+//                }
+//            }
+//            try {
+//                Thread.sleep(speed);
+//            } catch (InterruptedException e) {
+//                e.printStackTrace();
+//            }
+//        }
+        while (true) {
+            actorAction();
+            
+            try {
+                Thread.sleep(50);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
-        }).start();
+        }
     }
 
     public static void main(String[] args) {
@@ -104,9 +110,9 @@ public class PrairieStory extends JFrame implements KeyListener {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        addKeyListener(this);
+//        addKeyListener(this);
         theView = new View(field, GRID_SIZE);
-        step = new Step(field);
+        round = new Round(field);
         theView.setBackground(Color.yellow);
 //        theView.setSize(0, 0);  //发现panel组件设置大小没效果, 原因是布局管理器layout
 
@@ -115,7 +121,7 @@ public class PrairieStory extends JFrame implements KeyListener {
         setFrameCenter(this);//窗口左上角位置设置为屏幕中间
 //        setLayout(new FlowLayout());
 
-        //关闭窗口自动存档
+        //关闭窗口时自动存档
         addWindowListener(new WindowAdapter() {        // 此方法当窗口关闭时调用
             @Override
             public void windowClosing(WindowEvent e) {
@@ -177,95 +183,95 @@ public class PrairieStory extends JFrame implements KeyListener {
         frame.setLocation((int) (screenWidth - width) / 2, (int) (screenHeight - height) / 2);
     }
 
-    @Override
-    public void keyTyped(KeyEvent e) {
+//    @Override
+//    public void keyTyped(KeyEvent e) {
+//
+//    }
 
-    }
+//    @Override
+//    public void keyPressed(KeyEvent e) {
+//        Location location = null;
+//        switch (e.getKeyCode()) {
+//            case KeyEvent.VK_UP:
+//                location = actor.front();
+//                break;
+//            case KeyEvent.VK_DOWN:
+//                location = actor.back();
+//                break;
+//            case KeyEvent.VK_LEFT:
+//                location = actor.left();
+//                break;
+//            case KeyEvent.VK_RIGHT:
+//                location = actor.right();
+//                break;
+//            case KeyEvent.VK_W:
+//                actor.front = true;
+//                break;
+//            case KeyEvent.VK_S:
+//                actor.back = true;
+//                break;
+//            case KeyEvent.VK_A:
+//                actor.left = true;
+//                break;
+//            case KeyEvent.VK_D:
+//                actor.right = true;
+//                break;
+//            case 32://空格自动捕食
+//                location = new Location(-1, -1);
+//                break;
+//            case 10://回车
+//                location = new Location(-100, -100);
+//                break;
+//        }
+//        if (location != null) {
+//            if (actor.isAlive() && field.actorMove(actor, location)) {
+//                actorAction();
+//            } else {
+//                if (!theView.isDie()) {
+//                    theView.die();
+//                }
+//                theView.repaint();
+//                if (e.getKeyCode() == 10) {
+//                    if (audioClip != null) {
+//                        audioClip.stop();
+//                    }
+//                    round.stopAudio();
+//
+//                    dispose();
+//                    new PrairieStory(true);
+//                }
+//            }
+//        }
+//    }
 
-    @Override
-    public void keyPressed(KeyEvent e) {
-        Location location = null;
-        switch (e.getKeyCode()) {
-            case KeyEvent.VK_UP:
-                location = actor.front();
-                break;
-            case KeyEvent.VK_DOWN:
-                location = actor.back();
-                break;
-            case KeyEvent.VK_LEFT:
-                location = actor.left();
-                break;
-            case KeyEvent.VK_RIGHT:
-                location = actor.right();
-                break;
-            case KeyEvent.VK_W:
-                actor.front = true;
-                break;
-            case KeyEvent.VK_S:
-                actor.back = true;
-                break;
-            case KeyEvent.VK_A:
-                actor.left = true;
-                break;
-            case KeyEvent.VK_D:
-                actor.right = true;
-                break;
-            case 32://空格自动捕食
-                location = new Location(-1, -1);
-                break;
-            case 10://回车
-                location = new Location(-100, -100);
-                break;
-        }
-        if (location != null) {
-            if (actor.isAlive() && field.actorMove(actor, location)) {
-                actorTips();
-            } else {
-                if (!theView.isDie()) {
-                    theView.die();
-                }
-                theView.repaint();
-                if (e.getKeyCode() == 10) {
-                    if (audioClip != null) {
-                        audioClip.stop();
-                    }
-                    step.stopAudio();
+//    @Override
+//    public void keyReleased(KeyEvent e) {
+//        switch (e.getKeyCode()) {
+//            case KeyEvent.VK_W:
+//                actor.front = false;
+//                break;
+//            case KeyEvent.VK_S:
+//                actor.back = false;
+//                break;
+//            case KeyEvent.VK_A:
+//                actor.left = false;
+//                break;
+//            case KeyEvent.VK_D:
+//                actor.right = false;
+//                break;
+//        }
+//    }
 
-                    dispose();
-                    new PrairieStory(true);
-                }
-            }
-        }
-    }
-
-    @Override
-    public void keyReleased(KeyEvent e) {
-        switch (e.getKeyCode()) {
-            case KeyEvent.VK_W:
-                actor.front = false;
-                break;
-            case KeyEvent.VK_S:
-                actor.back = false;
-                break;
-            case KeyEvent.VK_A:
-                actor.left = false;
-                break;
-            case KeyEvent.VK_D:
-                actor.right = false;
-                break;
-        }
-    }
-
-    private void actorTips() {
+    private void actorAction() {
         theView.setTime(++time);
-        step.handle();
+        round.oneFrame();
         theView.repaint();
-        if (actor.getTime() > 0) {
-            label.setText("注意! 你将在 " + actor.getTime() + " 天后饿死! 可以通过【捕食羊、狼(危险)或者吃植物】来增加或者维持生命! 小心被狼吃了!");
-        } else {
-            label.setFont(new Font("楷体", 3, 20));
-            label.setText("有限的食物永远是导致大部分生物死亡的主要原因! 所以为了生存, 努力捕猎吧! (植物只能维持温饱)");
-        }
+//        if (actor.getRemainingTime() > 0) {
+//            label.setText("注意! 你将在 " + actor.getRemainingTime() + " 天后饿死! 可以通过【捕食羊、狼(危险)或者吃植物】来增加或者维持生命! 小心被狼吃了!");
+//        } else {
+//            label.setFont(new Font("楷体", 3, 20));
+//            label.setText("有限的食物永远是导致大部分生物死亡的主要原因! 所以为了生存, 努力捕猎吧! (植物只能维持温饱)");
+//        }
 
     }
 }

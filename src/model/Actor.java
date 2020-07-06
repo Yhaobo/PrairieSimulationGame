@@ -2,20 +2,19 @@ package model;
 
 import model.biology.animal.Human;
 
-public class Actor extends Human {
+public class Actor extends Human implements Protagonist{
     public boolean front;
     public boolean left;
     public boolean right;
     public boolean back;
 
     public Actor() {
-        setBreedableAge(1);
-        LIFE_TIME = Long.MAX_VALUE;
+        super(-1);
     }
 
     @Override
-    public boolean isBreedable() {
-        return age >= breedableAge && (age % 50 == 0);
+    public boolean isReproducible() {
+        return aliveTime >= adultTime && (aliveTime % 50 == 0);
     }
 
     @Override
@@ -23,8 +22,8 @@ public class Actor extends Human {
         return null;
     }
 
-    public int getTime() {
-        return ageLimit - age;
+    public int getRemainingTime() {
+        return maxAliveTime - aliveTime;
     }
 
     public Location move() {

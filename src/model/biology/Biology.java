@@ -4,53 +4,104 @@ import model.Cell;
 import model.Location;
 
 import java.io.Serializable;
-import java.util.ArrayList;
 
+/**
+ * 生物
+ */
 public abstract class Biology implements Serializable, Cell {
     private boolean isAlive = true;
-    private int x;
-    private int y;
+    private Location location;
+    private int version;
 
-    //    public Biology() {
-//    }
+    /**
+     * 最大寿命
+     */
+    protected final int maxLifetime;
+    /**
+     * 最大存活时间(动态,由吃东西增加)
+     */
+    protected int maxAliveTime;
+    /**
+     * 成熟时间
+     */
+    protected int adultTime;
+    /**
+     * 存活时间
+     */
+    protected int aliveTime;
+
+    public Biology(int aliveTime, int maxAliveTime, int adultTime, int maxLifetime) {
+        this.maxAliveTime = maxAliveTime;
+        this.adultTime = adultTime;
+        this.maxLifetime = maxLifetime;
+        this.aliveTime = aliveTime;
+    }
+
+    @Override
+    public synchronized boolean compareVersion(int newVersion) {
+        if (newVersion - 1 == version) {
+            version = newVersion;
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    @Override
+    public double getRemainTimePercent() {
+        int remainTime = maxAliveTime - aliveTime;
+        if (remainTime <= REMAIN_TIME_WARNING) {
+            return (double) remainTime / REMAIN_TIME_WARNING;
+        }
+        return 1;
+    }
+
     @Override
     public void setLocation(int row, int column) {
-        this.y = row;
-        this.x = column;
+        location = new Location(row, column);
     }
 
     @Override
     public Location getLocation() {
-        return new Location(y, x);
+        return location;
     }
 
-    public abstract Biology feed(ArrayList<Biology> neighbour);
-
+    /**
+     * 繁殖
+     *
+     * @return 新生命
+     */
     public abstract Biology breed();
 
-
-    public abstract void grow();
+    /**
+     * 生长
+     */
+    public void grow() {
+        if (maxLifetime <= 0) {
+            // 主角寿命无限
+            return;
+        }
+        if (++aliveTime >= maxAliveTime || aliveTime >= maxLifetime) {
+            die();
+        }
+    }
 
     public boolean isAlive() {
         return isAlive;
     }
+
+    public abstract boolean isReproducible();
 
     public void die() {
         isAlive = false;
     }
 
     public int getRow() {
-        return y;
+        return location.getRow();
     }
 
     public int getColumn() {
-        return x;
+        return location.getColumn();
     }
 
-//    public void setRow(int row) {
-//        y=row;
-//    }
-//    public void setColumn(int Column) {
-//        x=Column;
-//    }
 }

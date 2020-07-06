@@ -1,10 +1,8 @@
 package model;
 
 import model.biology.Biology;
-import model.biology.animal.Human;
 import model.biology.animal.Sheep;
 import model.biology.animal.Wolf;
-import model.biology.plant.Grass;
 import model.biology.plant.Plant;
 
 import java.applet.Applet;
@@ -13,10 +11,10 @@ import java.io.File;
 import java.io.Serializable;
 import java.net.MalformedURLException;
 import java.util.ArrayList;
-import java.util.List;
 
 /**
  * 容纳所有cell的场地
+ *
  * @author Yhaobo
  */
 public class Field implements Serializable {
@@ -28,7 +26,7 @@ public class Field implements Serializable {
     private final int width;
     private final int height;
     private Cell[][] field;
-    private Actor actor;
+    //    private Actor actor;
     AudioClip wolfAudio;
     AudioClip sheepAudio;
 
@@ -44,12 +42,12 @@ public class Field implements Serializable {
         }
     }
 
-    public Actor getActor() {
-        return actor;
-    }
+//    public Actor getActor() {
+//        return actor;
+//    }
 
-    public void init(Actor actor) {
-        this.actor = actor;
+    public void init() {
+//        this.actor = actor;
         for (int row = 0; row < height; row++) {
             for (int col = 0; col < width; col++) {
                 double probability = Math.random();
@@ -58,11 +56,11 @@ public class Field implements Serializable {
                 } else if (probability < 0.01) {
                     place(row, col, new Sheep((int) (Math.random() * 3650)));
                 } else {
-                    place(row, col, new Grass((int) (Math.random() * 3650)));
+                    place(row, col, new Plant((int) (Math.random() * 3650)));
                 }
             }
         }
-        place(height / 2, width / 2, actor);
+//        place(height / 2, width / 2, actor);
     }
 
     public int getWidth() {
@@ -74,21 +72,22 @@ public class Field implements Serializable {
     }
 
     /**
-     *  放置格子(把动物放进去)
+     * 放置格子(把动物放进去)
      */
     public void place(int row, int col, Cell cell) {
-        Biology biology = (Biology) cell;
+        Cell biology = cell;
         biology.setLocation(row, col);
         field[row][col] = biology;
 //		return field[row][col];
     }
 
-    public Cell get(int row, int col) {
+    public Cell getCell(int row, int col) {
         return field[row][col];
     }
 
     /**
      * 得到周围一圈的所有cell
+     *
      * @param row
      * @param col
      * @return
@@ -202,7 +201,7 @@ public class Field implements Serializable {
         }
         if (freeAdj.length > 0) {
             int idx = (int) (Math.random() * freeAdj.length);
-            int idxRow=freeAdj[idx].getRow();
+            int idxRow = freeAdj[idx].getRow();
             int idxColumn = freeAdj[idx].getColumn();
             biology.setLocation(idxRow, idxColumn);//设置坐标属性
             field[idxRow][idxColumn] = biology;//放置
@@ -227,110 +226,83 @@ public class Field implements Serializable {
         }
     }
 
-    public void eat(Cell hunter, Cell prey) {
+    public void instead(Cell hunter, Cell prey) {
         Biology hunterB = (Biology) hunter;
         Biology preyB = (Biology) prey;
         field[preyB.getRow()][preyB.getColumn()] = hunterB;
         field[hunterB.getRow()][hunterB.getColumn()] = null;
         hunterB.setLocation(preyB.getRow(), preyB.getColumn());
-//        int count = 0;
-//        for (int row = 0; row < height; row++) {
-//            for (int col = 0; col < width; col++) {
-//                if (field[row][col] == hunter) {
-//                    field[row][col] = null;
-//                    count++;
-//                }
-//                if (field[row][col] == prey) {
-//                    field[row][col] = hunter;
-//                    count++;
-//                }
-//                if (count == 2) {
-//                    return;
-//                }
-//            }
-//        }
-//        here:
-//        for (int row = 0; row < height; row++) {
-//            for (int col = 0; col < width; col++) {
-//                if (field[row][col] == prey) {
-//                    field[row][col]=null;
-//                    field[row][col] = hunter;
-//                    break here;
-//                }
-//            }
-//        }
-//        remove(hunter);
     }
 
-    public boolean actorMove(Actor actor, Location loc) {
-//        if (loc == null) {
-//            return false;
+//    public boolean actorMove(Actor actor, Location loc) {
+////        if (loc == null) {
+////            return false;
+////        }
+//        //判断actor有没有被吃掉,如果被吃掉则返回false
+//        if (actor.isAlive() && (getCell(actor.getRow(), actor.getColumn()) instanceof Actor)) {
+//            int rowLoc = loc.getRow();
+//            int colLoc = loc.getColumn();
+//            short eatWolf = 365;
+//            short eatSheep = 7;
+//            short eatPlant = 1;
+//            //actor的feed()的实现
+//            if (rowLoc > -1 && colLoc > -1 && rowLoc < height && colLoc < width && !(field[rowLoc][colLoc] instanceof Human)) {
+//                if (field[rowLoc][colLoc] instanceof Wolf) {
+//                    actor.longerLife(eatWolf, actor.MAX_LIFETIME);
+//                    wolfAudio.play();
+//                } else if (field[rowLoc][colLoc] instanceof Sheep) {
+//                    actor.longerLife(eatSheep, actor.MAX_LIFETIME);
+//                    if (sheepAudio != null) {
+//                        sheepAudio.stop();
+//                    }
+//                    sheepAudio.play();
+//                } else if (field[rowLoc][colLoc] instanceof Plant) {
+//                    actor.longerLife(eatPlant, actor.MAX_LIFETIME);
+//                }
+//                remove(actor.getRow(), actor.getColumn());
+//                actor.setLocation(loc.getRow(), loc.getColumn());
+//                field[rowLoc][colLoc] = actor;
+//                return true;
+//            }
+//            //空格键快速捕食
+//            if (rowLoc == -1 && colLoc == -1) {
+//                Cell[] cells = getNeighbour(actor.getRow(), actor.getColumn());
+//                boolean flag = false;// 避免吃完动物继续吃植物
+//                for (Cell cell : cells) {
+//                    if (cell instanceof Wolf) {
+//                        wolfAudio.play();
+//                        instead(actor, cell);
+//                        actor.longerLife(eatWolf, actor.MAX_LIFETIME);
+//                        flag = true;
+//                    } else if (cell instanceof Sheep) {
+//                        if (sheepAudio != null) {
+//                            sheepAudio.stop();
+//                        }
+//                        sheepAudio.play();
+//                        instead(actor, cell);
+//                        actor.longerLife(eatSheep, actor.MAX_LIFETIME);
+//                        flag = true;
+//                        break;
+//                    }
+//                }
+//                if (!flag) {
+//                    List<Cell> list = new ArrayList<>();
+//                    for (Cell cell : cells) {
+//                        if (cell instanceof Plant) {
+//                            list.add(cell);
+//                        }
+//                    }
+//                    if (list.size() > 0) {
+//                        Cell prey = list.get((int) (list.size() * Math.random()));
+//                        instead(actor, prey);
+//                        actor.longerLife(eatPlant, actor.MAX_LIFETIME);
+//                    }
+//                }
+//            }
+//            return true;
 //        }
-        //判断actor有没有被吃掉,如果被吃掉则返回false
-        if (actor.isAlive() && (get(actor.getRow(), actor.getColumn()) instanceof Actor)) {
-            int rowLoc = loc.getRow();
-            int colLoc = loc.getColumn();
-            short eatWolf = 365;
-            short eatSheep = 7;
-            short eatPlant = 1;
-            //actor的feed()的实现
-            if (rowLoc > -1 && colLoc > -1 && rowLoc < height && colLoc < width && !(field[rowLoc][colLoc] instanceof Human)) {
-                if (field[rowLoc][colLoc] instanceof Wolf) {
-                    actor.longerLife(eatWolf, actor.LIFE_TIME);
-                    wolfAudio.play();
-                } else if (field[rowLoc][colLoc] instanceof Sheep) {
-                    actor.longerLife(eatSheep, actor.LIFE_TIME);
-                    if (sheepAudio != null) {
-                        sheepAudio.stop();
-                    }
-                    sheepAudio.play();
-                } else if (field[rowLoc][colLoc] instanceof Grass) {
-                    actor.longerLife(eatPlant, actor.LIFE_TIME);
-                }
-                remove(actor.getRow(), actor.getColumn());
-                actor.setLocation(loc.getRow(), loc.getColumn());
-                field[rowLoc][colLoc] = actor;
-                return true;
-            }
-            //空格键快速捕食
-            if (rowLoc == -1 && colLoc == -1) {
-                Cell[] cells = getNeighbour(actor.getRow(), actor.getColumn());
-                boolean flag = false;// 避免吃完动物继续吃植物
-                for (Cell cell : cells) {
-                    if (cell instanceof Wolf) {
-                        wolfAudio.play();
-                        eat(actor, cell);
-                        actor.longerLife(eatWolf, actor.LIFE_TIME);
-                        flag = true;
-                    } else if (cell instanceof Sheep) {
-                        if (sheepAudio != null) {
-                            sheepAudio.stop();
-                        }
-                        sheepAudio.play();
-                        eat(actor, cell);
-                        actor.longerLife(eatSheep, actor.LIFE_TIME);
-                        flag = true;
-                        break;
-                    }
-                }
-                if (!flag) {
-                    List<Cell> list = new ArrayList<>();
-                    for (Cell cell : cells) {
-                        if (cell instanceof Grass) {
-                            list.add(cell);
-                        }
-                    }
-                    if (list.size() > 0) {
-                        Cell prey = list.get((int) (list.size() * Math.random()));
-                        eat(actor, prey);
-                        actor.longerLife(eatPlant, actor.LIFE_TIME);
-                    }
-                }
-            }
-            return true;
-        }
-        return false;
-    }
+//        return false;
+//    }
 
     public void move(int row, int col, Location loc) {
         if (loc == null) {
@@ -343,8 +315,8 @@ public class Field implements Serializable {
     }
 
     public void clearAudio() {
-       wolfAudio=null;
-       sheepAudio=null;
+        wolfAudio = null;
+        sheepAudio = null;
     }
 
     public void initAudio() {

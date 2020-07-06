@@ -10,13 +10,16 @@ import java.applet.AudioClip;
 import java.util.ArrayList;
 import java.util.HashSet;
 
-public class Step {
+/**
+ * 每一回合的处理
+ */
+public class Round {
     private Field field;
     private AudioClip screech;//惨叫声
     private AudioClip hungry;//肚子好饿周星驰
     private AudioClip laughter;//婴儿开心笑声
 
-    public Step(Field field) {
+    public Round(Field field) {
         this.field = field;
         try {
             screech = Applet.newAudioClip(this.getClass().getResource("/resource/惨叫声.wav"));
@@ -27,19 +30,20 @@ public class Step {
         }
     }
 
-    public void handle() {
+    public void oneFrame() {
         HashSet<Cell> isContains = new HashSet<>();
         for (int row = 0; row < field.getHeight(); row++) {
             for (int col = 0; col < field.getWidth(); col++) {
-                impl(row, col, isContains);
-                Thread.yield();
+                action(row, col, isContains);
             }
         }
     }
 
-    private void impl(int row, int col, HashSet<Cell> isContains) {
-        Biology biology = (Biology)field.get(row, col);
-        if (biology != null && biology.isAlive() && isContains.add(biology)) {//{ 判断包含,不包含则执行(确保一个cell一回合只能行动一次)
+    private void action(int row, int col, HashSet<Cell> isContains) {
+        Biology biology = (Biology)field.getCell(row, col);
+        if (biology != null && biology.isAlive() && isContains.add(biology)) {
+            //{ 判断包含,不包含则执行(确保一个cell一回合只能行动一次)
+            biology.grow();
             if (biology instanceof Animal) {//如果是动物
                 Animal animal = (Animal) biology;
                 boolean flag = false;// 如果吃了就不能移动
@@ -55,7 +59,7 @@ public class Step {
                                 }
                             }
                             if (!listBiology.isEmpty()) {
-                                Biology prey = animal.feed(listBiology);
+                                Biology prey = wolf.eat(listBiology);
                                 if (prey != null) {
                                     if (prey instanceof Human) {
                                         wolf.huntHumanFlag = true;
@@ -63,7 +67,7 @@ public class Step {
                                             screech.play();
                                         }
                                     }
-                                    field.eat(animal, prey);
+                                    field.instead(wolf, prey);
                                     flag = true;
                                 }
                             }
@@ -79,9 +83,9 @@ public class Step {
                             }
                         }
                         if (!listBiology.isEmpty()) {
-                            Biology prey = animal.feed(listBiology);
+                            Biology prey = animal.eat(listBiology);
                             if (prey != null) {
-                                field.eat(animal, prey);
+                                field.instead(animal, prey);
                                 flag = true;
                             }
                         }
@@ -107,11 +111,13 @@ public class Step {
                         if (isContains.add(baby)) {
                             if (laughter != null) {
                                 laughter.stop();
+              
+              
                             }
                             laughter.play();
                         }
                     }
-                    if (((Actor) animal).getTime() == 1) {
+                    if (((Actor) animal).getRemainingTime() == 1) {
                         hungry.play();
                     }
                 }
@@ -123,7 +129,7 @@ public class Step {
                     isContains.add(baby);
                 }
             }
-            biology.grow();
+
         } else if (biology != null &&!biology.isAlive()) {
             field.remove(row, col);
         }
