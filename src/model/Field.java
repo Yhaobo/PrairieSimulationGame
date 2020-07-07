@@ -1,9 +1,12 @@
 package model;
 
-import model.biology.Biology;
-import model.biology.animal.Sheep;
-import model.biology.animal.Wolf;
-import model.biology.plant.Plant;
+import model.entity.biology.Biology;
+import model.entity.biology.animal.Human;
+import model.entity.biology.animal.Sheep;
+import model.entity.biology.animal.Wolf;
+import model.entity.biology.plant.Plant;
+import model.entity.Location;
+import model.interfaces.Cell;
 
 import java.applet.Applet;
 import java.applet.AudioClip;
@@ -33,7 +36,8 @@ public class Field implements Serializable {
     public Field(int width, int height) {
         this.width = width;
         this.height = height;
-        field = new Cell[height][width];
+        System.out.println("格子数: " + width * height);
+        this.field = new Cell[height][width];
         try {
             wolfAudio = Applet.newAudioClip(this.getClass().getResource("/resource/狼叫声.wav"));
             sheepAudio = Applet.newAudioClip(this.getClass().getResource("/resource/羊叫声.wav"));
@@ -51,7 +55,9 @@ public class Field implements Serializable {
         for (int row = 0; row < height; row++) {
             for (int col = 0; col < width; col++) {
                 double probability = Math.random();
-                if (probability < 0.001) {
+                if (probability < 0.0005) {
+                    place(row, col, new Human((int) (Math.random() * 3650)));
+                } else if (probability < 0.001) {
                     place(row, col, new Wolf((int) (Math.random() * 3650)));
                 } else if (probability < 0.01) {
                     place(row, col, new Sheep((int) (Math.random() * 3650)));

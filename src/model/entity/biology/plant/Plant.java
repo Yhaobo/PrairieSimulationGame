@@ -1,6 +1,6 @@
-package model.biology.plant;
+package model.entity.biology.plant;
 
-import model.biology.Biology;
+import model.entity.biology.Biology;
 
 import java.awt.*;
 
@@ -17,10 +17,11 @@ public class Plant extends Biology {
     }
 
     @Override
-    public Plant breed() {
+    public Biology breed() {
         Plant ret = null;
         if (isReproducible()) {
             ret = new Plant();
+            ret.version=this.version;
         }
         return ret;
     }

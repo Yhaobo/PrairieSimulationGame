@@ -1,15 +1,17 @@
 package model;
 
-import model.biology.animal.Human;
+import model.entity.biology.animal.Human;
+import model.entity.Location;
+import model.interfaces.Protagonist;
 
-public class Actor extends Human implements Protagonist{
+public class Actor extends Human implements Protagonist {
     public boolean front;
     public boolean left;
     public boolean right;
     public boolean back;
 
     public Actor() {
-        super(-1);
+        super(0,-1);
     }
 
     @Override

@@ -1,7 +1,7 @@
-package model.biology;
+package model.entity.biology;
 
-import model.Cell;
-import model.Location;
+import model.entity.Location;
+import model.interfaces.Cell;
 
 import java.io.Serializable;
 
@@ -11,7 +11,7 @@ import java.io.Serializable;
 public abstract class Biology implements Serializable, Cell {
     private boolean isAlive = true;
     private Location location;
-    private int version;
+    protected int version;
 
     /**
      * 最大寿命

@@ -1,7 +1,7 @@
-package model.biology.animal;
+package model.entity.biology.animal;
 
-import model.Location;
-import model.biology.Biology;
+import model.entity.Location;
+import model.entity.biology.Biology;
 
 import java.awt.*;
 import java.util.ArrayList;
@@ -26,10 +26,11 @@ public class Wolf extends Animal {
 
 
     @Override
-    public Animal breed() {
-        Animal ret = null;
+    public Biology breed() {
+        Wolf ret = null;
         if (isReproducible()) {
             ret = new Wolf();
+            ret.version=this.version;
         }
         return ret;
     }

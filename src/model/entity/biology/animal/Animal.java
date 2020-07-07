@@ -1,7 +1,7 @@
-package model.biology.animal;
+package model.entity.biology.animal;
 
-import model.Location;
-import model.biology.Biology;
+import model.entity.Location;
+import model.entity.biology.Biology;
 
 import java.util.ArrayList;
 

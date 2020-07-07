@@ -19,12 +19,12 @@ public class PrairieStory extends JFrame {
     private Round round;
     private JLabel label;
     private static File archive = new File("存档.data");
-    private boolean pause = true;
-    private long speed = 20L;
+    private boolean pause = false;
+    private long speed = 10L;
     private long time;
     private int x;
     private int y;
-    private static final byte GRID_SIZE = 10;
+    private static final byte GRID_SIZE = 3;
     //    private Actor actor;
     private static AudioClip audioClip;
 
@@ -62,48 +62,58 @@ public class PrairieStory extends JFrame {
 //                e.printStackTrace();
 //            }
 //        }
-        while (true) {
-            actorAction();
-            
+
+    }
+
+    public static void main(String[] args) {
+        PrairieStory game = null;
+        try {
+            if (archive.exists()) {
+                try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(archive))) {
+                    field = (Field) in.readObject();
+                } catch (FileNotFoundException e) {
+                    e.printStackTrace();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    System.out.println(archive.delete());
+                }
+                game = new PrairieStory(false);
+
+                //创建一个选择弹出窗口，默认三选项：是，否，取消，返回值对应为0,1,2
+                int num = JOptionPane.showConfirmDialog(null, "是否继续上次的游戏?");
+                if (num == 0) {
+//                story.start();
+                } else if (num == 1) {
+                    game.dispose();
+                    if (audioClip != null) {
+                        audioClip.stop();
+                    }
+                    game = new PrairieStory(true);
+                } else {
+                    System.exit(0);
+                }
+            } else {
+                game = new PrairieStory(true);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            game = new PrairieStory(true);
+        }
+        game.gameStart();
+    }
+
+    private void gameStart() {
+        while (!pause) {
+            step();
             try {
-                Thread.sleep(50);
+                Thread.sleep(speed);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
         }
     }
 
-    public static void main(String[] args) {
-        if (archive.exists()) {
-            try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(archive))) {
-                field = (Field) in.readObject();
-            } catch (FileNotFoundException e) {
-                e.printStackTrace();
-            } catch (Exception e) {
-                e.printStackTrace();
-                System.out.println(archive.delete());
-            }
-            PrairieStory story = new PrairieStory(false);
-
-            //创建一个选择弹出窗口，默认三选项：是，否，取消，返回值对应为0,1,2
-            int num = JOptionPane.showConfirmDialog(null, "是否继续上次的游戏?");
-            if (num == 0) {
-//                story.start();
-            } else if (num == 1) {
-                story.dispose();
-                if (audioClip != null) {
-                    audioClip.stop();
-                }
-                new PrairieStory(true);
-            } else {
-                System.exit(0);
-            }
-        } else {
-            new PrairieStory(true);
-        }
-    }
-
-    public void init() {
+    private void init() {
         try {
             audioClip = Applet.newAudioClip(this.getClass().getResource("/resource/背景音乐.wav"));
             audioClip.loop();
@@ -122,22 +132,23 @@ public class PrairieStory extends JFrame {
 //        setLayout(new FlowLayout());
 
         //关闭窗口时自动存档
-        addWindowListener(new WindowAdapter() {        // 此方法当窗口关闭时调用
+        addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
-                if (!theView.isDie()) {
-                    try (ObjectOutputStream out = new ObjectOutputStream(
-                            new FileOutputStream(archive))) {
-                        field.clearAudio();
-                        out.writeObject(field);
-                    } catch (FileNotFoundException e1) {
-                        e1.printStackTrace();
-                    } catch (IOException e1) {
-                        e1.printStackTrace();
-                    }
-                } else {
-                    archive.delete();
+                pause = true;
+//                if (!theView.isDie()) {
+                try (ObjectOutputStream out = new ObjectOutputStream(
+                        new FileOutputStream(archive))) {
+                    field.clearAudio();
+                    out.writeObject(field);
+                } catch (FileNotFoundException e1) {
+                    e1.printStackTrace();
+                } catch (IOException e1) {
+                    e1.printStackTrace();
                 }
+//                } else {
+//                    archive.delete();
+//                }
 //                System.out.println("保存成功");
 //                dispose();
 //                JOptionPane.showMessageDialog(PrairieStory.this, "保存成功");
@@ -173,7 +184,7 @@ public class PrairieStory extends JFrame {
 //        getContentPane().setBackground(Color.BLUE);
     }
 
-    public static void setFrameCenter(JFrame frame) {
+    private static void setFrameCenter(JFrame frame) {
         Toolkit kit = Toolkit.getDefaultToolkit();
         Dimension d = kit.getScreenSize();
         double screenWidth = d.getWidth();
@@ -262,9 +273,9 @@ public class PrairieStory extends JFrame {
 //        }
 //    }
 
-    private void actorAction() {
+    private void step() {
         theView.setTime(++time);
-        round.oneFrame();
+        round.oneFrame((int) time);
         theView.repaint();
 //        if (actor.getRemainingTime() > 0) {
 //            label.setText("注意! 你将在 " + actor.getRemainingTime() + " 天后饿死! 可以通过【捕食羊、狼(危险)或者吃植物】来增加或者维持生命! 小心被狼吃了!");

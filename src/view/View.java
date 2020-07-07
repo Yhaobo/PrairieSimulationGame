@@ -1,24 +1,24 @@
 package view;
 
 import model.Actor;
-import model.Cell;
+import model.interfaces.Cell;
 import model.Field;
-import model.biology.animal.Human;
-import model.biology.animal.Wolf;
-import model.biology.plant.Plant;
+import model.entity.biology.animal.Human;
+import model.entity.biology.animal.Wolf;
+import model.entity.biology.plant.Plant;
 
 import javax.swing.*;
 import java.awt.*;
 
 public class View extends JPanel {
-    //    private static final long serialVersionUID = -5258995676212660595L;
+    private static final long serialVersionUID = -5258995676212660595L;
     private final byte GRID_SIZE;
     private Field theField;
     private static JLabel label;
     private long time;
     private boolean flag;
-//    private int count;
-//    AudioClip audioClip;
+
+    private long startTime = System.currentTimeMillis();
 
     public View(Field field, byte size) {
         theField = field;
@@ -33,19 +33,19 @@ public class View extends JPanel {
         this.time = time;
     }
 
-    public void die() {
-        flag = true;
+//    public void die() {
+//        flag = true;
 //        try {
 //            audioClip= Applet.newAudioClip(new File("resource/死亡声音.wav").toURI().toURL());
 //            audioClip.play();
 //        } catch (MalformedURLException e) {
 //            e.printStackTrace();
 //        }
-    }
+//    }
 
-    public boolean isDie() {
-        return flag;
-    }
+//    public boolean isDie() {
+//        return flag;
+//    }
 
     @Override
     public void paintComponent(Graphics g) {
@@ -57,7 +57,7 @@ public class View extends JPanel {
             int human = 0;
             int wolf = 0;
             int sheep = 0;
-            g.setColor(Color.GRAY);
+            g.setColor(Color.LIGHT_GRAY);
             //画行
             for (int row = 0; row < theField.getHeight(); row++) {
                 g.drawLine(0, row * GRID_SIZE, theField.getWidth() * GRID_SIZE, row * GRID_SIZE);
@@ -90,17 +90,13 @@ public class View extends JPanel {
                             sheep++;
                         }
                     }
-//                else {
-//                    g.setColor(new Color(255, 255, 0));
-//                    g.fillRect(col * GRID_SIZE, row * GRID_SIZE, GRID_SIZE, GRID_SIZE);
-//                }
                 }
             }
             int sum = grass + human + wolf + sheep;
 
             //使用String.format()方法来格式化
-            label.setText(String.format("植物【绿色】: %04d株   人【红色】：%04d个    狼【黑色】：%04d匹    羊【蓝色】：%04d只    总数: %05d个    时间: %d天",
-                    grass, human, wolf, sheep, sum, time));
+            label.setText(String.format("植物【绿色】: %04d株   人【红色】：%04d个    狼【黑色】：%04d匹    羊【蓝色】：%04d只    总数: %05d个    时间: %d天    平均帧率: %d ",
+                    grass, human, wolf, sheep, sum, time, (int) (time / ((double) (System.currentTimeMillis() - startTime) / 1000))));
         } else {
 
             g.setColor(Color.RED);
@@ -114,7 +110,11 @@ public class View extends JPanel {
         }
     }
 
-    //通过重写此方法可以配合JFrame.pack()方法来实现JFrame容器匹配组件的大小
+    /**
+     * 通过重写此方法可以配合JFrame.pack()方法来实现JFrame容器匹配组件的大小
+     *
+     * @return
+     */
     @Override
     public Dimension getPreferredSize() {
         return new Dimension(theField.getWidth() * GRID_SIZE, theField.getHeight() * GRID_SIZE);

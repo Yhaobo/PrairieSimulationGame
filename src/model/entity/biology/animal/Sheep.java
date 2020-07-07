@@ -1,8 +1,8 @@
-package model.biology.animal;
+package model.entity.biology.animal;
 
-import model.Location;
-import model.biology.Biology;
-import model.biology.plant.Plant;
+import model.entity.Location;
+import model.entity.biology.Biology;
+import model.entity.biology.plant.Plant;
 
 import java.awt.*;
 import java.util.ArrayList;
@@ -13,8 +13,8 @@ public class Sheep extends Animal {
         this(0);
     }
 
-    public Sheep(int age) {
-        super(age,age + 15, 2 * 365 / 2,12 * 365 / 2);
+    public Sheep(int aliveTime) {
+        super(aliveTime,aliveTime + 15, 2 * 365 / 2,12 * 365 / 2);
     }
 
     @Override
@@ -30,10 +30,11 @@ public class Sheep extends Animal {
     }
 
     @Override
-    public Animal breed() {
-        Animal ret = null;
+    public Biology breed() {
+        Sheep ret = null;
         if (isReproducible()) {
             ret = new Sheep();
+            ret.version=this.version;
         }
         return ret;
     }

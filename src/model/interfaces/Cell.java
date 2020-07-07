@@ -1,4 +1,6 @@
-package model;
+package model.interfaces;
+
+import model.entity.Location;
 
 import java.awt.*;
 

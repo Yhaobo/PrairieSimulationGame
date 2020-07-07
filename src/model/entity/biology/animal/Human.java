@@ -1,8 +1,8 @@
-package model.biology.animal;
+package model.entity.biology.animal;
 
-import model.Location;
-import model.biology.Biology;
-import model.biology.plant.Plant;
+import model.entity.Location;
+import model.entity.biology.Biology;
+import model.entity.biology.plant.Plant;
 
 import java.awt.*;
 import java.util.ArrayList;
@@ -12,15 +12,15 @@ public class Human extends Animal {
     private boolean hero = false;
 
     public Human() {
-        this(80 * 365 / 2);
+        this(0);
     }
 
     public Human(int aliveTime,int maxLifetime) {
         super(aliveTime, aliveTime + 15, 16 * 365 / 2, maxLifetime);
     }
 
-    public Human(int maxLifetime) {
-        this(0,maxLifetime);
+    public Human(int aliveTime) {
+        this(aliveTime,80 * 365 / 2);
     }
 
     @Override
@@ -34,10 +34,11 @@ public class Human extends Animal {
     }
 
     @Override
-    public Animal breed() {
-        Animal ret = null;
+    public Biology breed() {
+        Human ret = null;
         if (isReproducible() && Math.random() < PROBABILITY) {
             ret = new Human();
+            ret.version=this.version;
         }
         return ret;
     }

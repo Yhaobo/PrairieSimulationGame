@@ -1,14 +1,15 @@
 package model;
 
-import model.biology.Biology;
-import model.biology.animal.Animal;
-import model.biology.animal.Human;
-import model.biology.animal.Wolf;
+import model.entity.Location;
+import model.entity.biology.Biology;
+import model.entity.biology.animal.Animal;
+import model.entity.biology.animal.Human;
+import model.entity.biology.animal.Wolf;
+import model.interfaces.Cell;
 
 import java.applet.Applet;
 import java.applet.AudioClip;
 import java.util.ArrayList;
-import java.util.HashSet;
 
 /**
  * 每一回合的处理
@@ -30,18 +31,18 @@ public class Round {
         }
     }
 
-    public void oneFrame() {
-        HashSet<Cell> isContains = new HashSet<>();
+    public void oneFrame(int version) {
+//        HashSet<Cell> isContains = new HashSet<>();
         for (int row = 0; row < field.getHeight(); row++) {
             for (int col = 0; col < field.getWidth(); col++) {
-                action(row, col, isContains);
+                action(row, col,version);
             }
         }
     }
 
-    private void action(int row, int col, HashSet<Cell> isContains) {
+    private void action(int row, int col,int version) {
         Biology biology = (Biology)field.getCell(row, col);
-        if (biology != null && biology.isAlive() && isContains.add(biology)) {
+        if (biology != null && biology.isAlive() && biology.compareVersion(version)) {
             //{ 判断包含,不包含则执行(确保一个cell一回合只能行动一次)
             biology.grow();
             if (biology instanceof Animal) {//如果是动物
@@ -94,7 +95,7 @@ public class Round {
                     Cell baby = animal.breed();
                     if (baby != null) {
                         field.placeRandomAdj(row, col, baby);
-                        isContains.add(baby);
+//                        isContains.add(baby);
                     }
                     // move
                     if (!flag) {
@@ -103,30 +104,31 @@ public class Round {
                             field.move(row, col, loc);
                         }
                     }
-                } else {//actor
-                    // breed
-                    Cell baby = animal.breed();
-                    if (baby != null) {
-                        field.placeRandomAdj(row, col, baby);
-                        if (isContains.add(baby)) {
-                            if (laughter != null) {
-                                laughter.stop();
-              
-              
-                            }
-                            laughter.play();
-                        }
-                    }
-                    if (((Actor) animal).getRemainingTime() == 1) {
-                        hungry.play();
-                    }
                 }
+//                else {//actor
+//                    // breed
+//                    Cell baby = animal.breed();
+//                    if (baby != null) {
+//                        field.placeRandomAdj(row, col, baby);
+//                        if (isContains.add(baby)) {
+//                            if (laughter != null) {
+//                                laughter.stop();
+//
+//
+//                            }
+//                            laughter.play();
+//                        }
+//                    }
+//                    if (((Actor) animal).getRemainingTime() == 1) {
+//                        hungry.play();
+//                    }
+//                }
             } else {//如果是植物
                 // breed
                 Cell baby = biology.breed();
                 if (baby != null) {
                     field.placeRandomAdj(row, col, baby);
-                    isContains.add(baby);
+//                    isContains.add(baby);
                 }
             }
 

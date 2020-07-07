@@ -1,4 +1,4 @@
-package model;
+package model.interfaces;
 
 /**
  * 主角儿,被操控的对象
