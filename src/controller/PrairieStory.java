@@ -19,7 +19,7 @@ public class PrairieStory extends JFrame {
     private Round round;
     private JLabel label;
     private static File archive = new File("存档.data");
-    private boolean pause = false;
+    private volatile boolean pause = false;
     private long speed = 10L;
     private long time;
     private int x;
@@ -71,11 +71,10 @@ public class PrairieStory extends JFrame {
             if (archive.exists()) {
                 try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(archive))) {
                     field = (Field) in.readObject();
-                } catch (FileNotFoundException e) {
-                    e.printStackTrace();
                 } catch (Exception e) {
                     e.printStackTrace();
-                    System.out.println(archive.delete());
+                    archive.delete();
+                    throw e;
                 }
                 game = new PrairieStory(false);
 
@@ -275,7 +274,7 @@ public class PrairieStory extends JFrame {
 
     private void step() {
         theView.setTime(++time);
-        round.oneFrame((int) time);
+        round.oneRound((int) time);
         theView.repaint();
 //        if (actor.getRemainingTime() > 0) {
 //            label.setText("注意! 你将在 " + actor.getRemainingTime() + " 天后饿死! 可以通过【捕食羊、狼(危险)或者吃植物】来增加或者维持生命! 小心被狼吃了!");

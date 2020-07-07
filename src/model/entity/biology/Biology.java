@@ -75,15 +75,19 @@ public abstract class Biology implements Serializable, Cell {
 
     /**
      * 生长
+     *
+     * @return 如果死亡返回false, 活着则返回true
      */
-    public void grow() {
+    public boolean grow() {
         if (maxLifetime <= 0) {
             // 主角寿命无限
-            return;
+            return true;
         }
-        if (++aliveTime >= maxAliveTime || aliveTime >= maxLifetime) {
+        if (++aliveTime > maxAliveTime || aliveTime > maxLifetime) {
             die();
+            return false;
         }
+        return true;
     }
 
     public boolean isAlive() {

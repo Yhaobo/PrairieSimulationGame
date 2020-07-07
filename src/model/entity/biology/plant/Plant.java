@@ -5,8 +5,6 @@ import model.entity.biology.Biology;
 import java.awt.*;
 
 public class Plant extends Biology {
-    private int ageLimit=Integer.MAX_VALUE;
-    private int adultAge=60;
 
     public Plant() {
         this(0);
@@ -26,17 +24,10 @@ public class Plant extends Biology {
         return ret;
     }
 
-    @Override
-    public void grow() {
-        aliveTime++;
-        if (aliveTime >= ageLimit) {
-            super.die();
-        }
-    }
 
     @Override
     public boolean isReproducible() {
-        return aliveTime >= adultAge && (aliveTime % 60 == 0);
+        return aliveTime >= adultTime && (aliveTime % 60 == 0);
     }
 
     @Override

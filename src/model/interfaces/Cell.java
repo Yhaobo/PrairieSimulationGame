@@ -3,8 +3,10 @@ package model.interfaces;
 import model.entity.Location;
 
 import java.awt.*;
+import java.io.Serializable;
 
-public interface Cell {
+public interface Cell extends Serializable {
+    long serialVersionUID = 42L;
     int REMAIN_TIME_WARNING = 10;
 
     /**

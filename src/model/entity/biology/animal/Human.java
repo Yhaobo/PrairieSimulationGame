@@ -62,7 +62,7 @@ public class Human extends Animal {
             ret = list.get((int) (Math.random() * list.size()));
             if (ret instanceof Wolf) {
                 maxAliveTime += 365;
-                super.setAdultAge(0);
+                adultTime=0;
                 hero = true;
             } else if (ret instanceof Sheep) {
                 maxAliveTime += 30;

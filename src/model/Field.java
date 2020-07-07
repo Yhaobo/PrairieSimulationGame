@@ -55,9 +55,9 @@ public class Field implements Serializable {
         for (int row = 0; row < height; row++) {
             for (int col = 0; col < width; col++) {
                 double probability = Math.random();
-                if (probability < 0.0005) {
+                if (probability < 0.001) {
                     place(row, col, new Human((int) (Math.random() * 3650)));
-                } else if (probability < 0.001) {
+                } else if (probability < 0.0011) {
                     place(row, col, new Wolf((int) (Math.random() * 3650)));
                 } else if (probability < 0.01) {
                     place(row, col, new Sheep((int) (Math.random() * 3650)));
