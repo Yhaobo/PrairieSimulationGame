@@ -20,7 +20,7 @@ public class Actor extends Human implements Protagonist {
     }
 
     @Override
-    public Location move(Location[] freeAdj) {
+    public Location move(Location location) {
         return null;
     }
 

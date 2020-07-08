@@ -11,7 +11,6 @@ import javax.swing.*;
 import java.awt.*;
 
 public class View extends JPanel {
-    private static final long serialVersionUID = -5258995676212660595L;
     private final byte GRID_SIZE;
     private Field theField;
     private static JLabel label;

@@ -1,44 +1,37 @@
 package model.entity;
 
 import java.io.Serializable;
-import java.util.Objects;
 
 public class Location implements Serializable {
-    private int x;
-    private int y;
+    private int row;
+    private int col;
 
     public Location(int row, int col) {
-        this.y = row;
-        this.x = col;
+        this.row = row;
+        this.col = col;
     }
 
     public int getColumn() {
-        return x;
+        return col;
     }
 
     public int getRow() {
-        return y;
+        return row;
     }
 
     public void setColumn(int Column) {
-        this.x = Column;
+        this.col = Column;
     }
 
     public void setRow(int Row) {
-        this.y = Row;
+        this.row = Row;
     }
 
     @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        Location location = (Location) o;
-        return x == location.x &&
-                y == location.y;
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(x, y);
+    public String toString() {
+        return "Location{" +
+                "row=" + row +
+                ", col=" + col +
+                '}';
     }
 }

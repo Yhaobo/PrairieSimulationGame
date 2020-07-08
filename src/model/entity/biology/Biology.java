@@ -3,12 +3,10 @@ package model.entity.biology;
 import model.entity.Location;
 import model.interfaces.Cell;
 
-import java.io.Serializable;
-
 /**
  * 生物
  */
-public abstract class Biology implements Serializable, Cell {
+public abstract class Biology implements Cell {
     private boolean isAlive = true;
     private Location location;
     protected int version;
@@ -43,6 +41,9 @@ public abstract class Biology implements Serializable, Cell {
             version = newVersion;
             return true;
         } else {
+            if (version != newVersion) {
+                System.out.println("版本控制异常,version="+version+",newVersion="+newVersion);
+            }
             return false;
         }
     }
@@ -51,7 +52,7 @@ public abstract class Biology implements Serializable, Cell {
     public double getRemainTimePercent() {
         int remainTime = maxAliveTime - aliveTime;
         if (remainTime <= REMAIN_TIME_WARNING) {
-            return (double) remainTime / REMAIN_TIME_WARNING;
+            return (double) (Math.max(remainTime, 0)) / REMAIN_TIME_WARNING;
         }
         return 1;
     }
@@ -94,18 +95,29 @@ public abstract class Biology implements Serializable, Cell {
         return isAlive;
     }
 
+    /**
+     * 是否可繁殖
+     *
+     * @return
+     */
     public abstract boolean isReproducible();
 
     public void die() {
         isAlive = false;
     }
 
+    @Override
     public int getRow() {
         return location.getRow();
     }
 
+    @Override
     public int getColumn() {
         return location.getColumn();
     }
 
+    @Override
+    public synchronized void setVersion(int version) {
+        this.version = version;
+    }
 }

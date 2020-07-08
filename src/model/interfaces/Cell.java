@@ -7,7 +7,11 @@ import java.io.Serializable;
 
 public interface Cell extends Serializable {
     long serialVersionUID = 42L;
-    int REMAIN_TIME_WARNING = 10;
+    int REMAIN_TIME_WARNING = 5;
+    /**
+     * 这个游戏中一年只有一百天
+     */
+    int ONE_YEAR_DAYS = 100;
 
     /**
      * 2D绘画
@@ -35,6 +39,18 @@ public interface Cell extends Serializable {
     Location getLocation();
 
     /**
+     * 返回纵坐标
+     * @return
+     */
+    int getRow();
+
+    /**
+     * 返回横坐标
+     * @return
+     */
+    int getColumn();
+
+    /**
      * 每回合版本号+1, 此方法是为了防止一个Cell在一回合内多次行动
      *
      * @param newVersion 最新的版本号
@@ -48,4 +64,9 @@ public interface Cell extends Serializable {
      * @return 返回剩余存活时间和REMAIN_TIME_WARNING的比值
      */
     double getRemainTimePercent();
+
+    /**
+     * 设置版本号
+     */
+    void setVersion(int version);
 }

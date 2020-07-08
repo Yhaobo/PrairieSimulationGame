@@ -14,24 +14,29 @@ import java.io.File;
 import java.io.Serializable;
 import java.net.MalformedURLException;
 import java.util.ArrayList;
+import java.util.List;
 
 /**
- * 容纳所有cell的场地
+ * 容纳所有Cell的场地
  *
  * @author Yhaobo
  */
 public class Field implements Serializable {
     private static final long serialVersionUID = 42L;
-    private static final Location[] adjacent = {new Location(-1, -1), new Location(-1, 0),
-            new Location(-1, 1), new Location(0, -1),
-            new Location(0, 1), new Location(1, -1),
-            new Location(1, 0), new Location(1, 1)};
+    private static final List<Location> adjacent = MyUtils.generateVIEW_SCOPE(1);
     private final int width;
     private final int height;
-    private Cell[][] field;
+    /**
+     * 由Cell组成的矩阵
+     */
+    private volatile Cell[][] field;
     //    private Actor actor;
-    AudioClip wolfAudio;
-    AudioClip sheepAudio;
+    private AudioClip wolfAudio;
+    private AudioClip sheepAudio;
+    /**
+     * 存档时才保存的版本号
+     */
+    private long version;
 
     public Field(int width, int height) {
         this.width = width;
@@ -46,9 +51,16 @@ public class Field implements Serializable {
         }
     }
 
-//    public Actor getActor() {
+    //    public Actor getActor() {
 //        return actor;
 //    }
+    public void setVersion(long version) {
+        this.version = version;
+    }
+
+    public long getVersion() {
+        return version;
+    }
 
     public void init() {
 //        this.actor = actor;
@@ -57,9 +69,9 @@ public class Field implements Serializable {
                 double probability = Math.random();
                 if (probability < 0.001) {
                     place(row, col, new Human((int) (Math.random() * 3650)));
-                } else if (probability < 0.0011) {
+                } else if (probability < 0.005) {
                     place(row, col, new Wolf((int) (Math.random() * 3650)));
-                } else if (probability < 0.01) {
+                } else if (probability < 0.02) {
                     place(row, col, new Sheep((int) (Math.random() * 3650)));
                 } else {
                     place(row, col, new Plant((int) (Math.random() * 3650)));
@@ -124,18 +136,15 @@ public class Field implements Serializable {
         return list.toArray(new Cell[list.size()]);
     }
 
-    public Location[] getFreeNeighbour(int row, int col) {
+    /**
+     * 获取最近一圈空的位置
+     *
+     * @param row
+     * @param col
+     * @return
+     */
+    public List<Location> getFreeNeighbour(int row, int col) {
         ArrayList<Location> list = new ArrayList<>();
-
-//		for (int i = -1; i < 2; i++) {
-//			for (int j = -1; j < 2; j++) {
-//				int r = row + i;
-//				int c = col + j;
-//				if (r > -1 && r < height && c > -1 && c < width && field[r][c] == null) {
-//					list.add(new Location(r, c));
-//				}
-//			}
-//		}
 
         for (Location loc : adjacent) {
             int r = row + loc.getColumn();
@@ -144,10 +153,10 @@ public class Field implements Serializable {
                 list.add(new Location(r, c));
             }
         }
-        return list.toArray(new Location[list.size()]);
+        return list;
     }
 
-    public Location[] getNeighbourLocation(int row, int col) {
+    public List<Location> getNeighbourLocation(int row, int col) {
         ArrayList<Location> list = new ArrayList<>();
 
 //		for (int i = -1; i < 2; i++) {
@@ -167,15 +176,15 @@ public class Field implements Serializable {
                 list.add(new Location(r, c));
             }
         }
-        return list.toArray(new Location[list.size()]);
+        return list;
     }
 //    public void average() {
 //        System.out.println(sum / count);
 //    }
 
-    public Location[] PlantgetFreeNeighbour(int row, int col) {
+    public List<Location> PlantgetFreeNeighbour(int row, int col) {
         ArrayList<Location> list = new ArrayList<>();
-        int scope = 7;//范围
+        int scope = 10;//范围
         for (int i = -scope; i <= scope; i++) {
             for (int j = -scope; j <= scope; j++) {
                 int r = row + i;
@@ -192,23 +201,23 @@ public class Field implements Serializable {
 //                list.add(new Location(r, c));
 //            }
 //        }
-        return list.toArray(new Location[list.size()]);
+        return list;
     }
 
     //放置新生命
     public boolean placeRandomAdj(int row, int col, Cell cell) {
         Biology biology = (Biology) cell;
         boolean ret = false;
-        Location[] freeAdj;
+        List<Location> freeAdj;
         if (cell instanceof Plant) {
             freeAdj = PlantgetFreeNeighbour(row, col);
         } else {
             freeAdj = getNeighbourLocation(row, col);
         }
-        if (freeAdj.length > 0) {
-            int idx = (int) (Math.random() * freeAdj.length);
-            int idxRow = freeAdj[idx].getRow();
-            int idxColumn = freeAdj[idx].getColumn();
+        if (freeAdj.size() > 0) {
+            int idx = (int) (Math.random() * freeAdj.size());
+            int idxRow = freeAdj.get(idx).getRow();
+            int idxColumn = freeAdj.get(idx).getColumn();
             biology.setLocation(idxRow, idxColumn);//设置坐标属性
             field[idxRow][idxColumn] = biology;//放置
             ret = true;
@@ -232,11 +241,18 @@ public class Field implements Serializable {
         }
     }
 
-    public void instead(Cell hunter, Cell prey) {
+    /**
+     * 猎人取代猎物的位置, 猎人原位置置空
+     *
+     * @param hunter 猎人
+     * @param prey   猎物
+     */
+    public void replace(Cell hunter, Cell prey) {
         Biology hunterB = (Biology) hunter;
         Biology preyB = (Biology) prey;
         field[preyB.getRow()][preyB.getColumn()] = hunterB;
-        field[hunterB.getRow()][hunterB.getColumn()] = null;
+        remove(hunterB.getRow(), hunterB.getColumn());
+        // 猎人自身的位置属性更新
         hunterB.setLocation(preyB.getRow(), preyB.getColumn());
     }
 
@@ -310,16 +326,26 @@ public class Field implements Serializable {
 //        return false;
 //    }
 
+    /**
+     * 移动
+     *
+     * @param row
+     * @param col
+     * @param loc 新位置
+     */
     public void move(int row, int col, Location loc) {
         if (loc == null) {
             return;
         }
         Biology biology = (Biology) field[row][col];
-        biology.setLocation(loc.getRow(), loc.getColumn());
         field[loc.getRow()][loc.getColumn()] = biology;
+        biology.setLocation(loc.getRow(), loc.getColumn());
         remove(row, col);
     }
 
+    /**
+     * AudioClip不支持序列化, 所以只能置空
+     */
     public void clearAudio() {
         wolfAudio = null;
         sheepAudio = null;

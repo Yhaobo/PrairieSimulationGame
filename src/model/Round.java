@@ -5,6 +5,7 @@ import model.entity.biology.Biology;
 import model.entity.biology.animal.Animal;
 import model.entity.biology.animal.Human;
 import model.entity.biology.animal.Wolf;
+import model.entity.biology.plant.Plant;
 import model.interfaces.Cell;
 
 import java.applet.Applet;
@@ -91,29 +92,21 @@ public class Round {
                     // eat
                     if (animal instanceof Wolf) {//狼的捕食范围为周围两圈
                         Wolf wolf = (Wolf) animal;
-                        if (!wolf.huntHumanFlag) {
-                            ArrayList<Biology> listBiology = new ArrayList<>();
-                            for (Cell an : field.WolfgetNeighbour(row, col)) {
-                                if (an instanceof Biology) {
-                                    listBiology.add((Biology) an);
-                                }
+                        ArrayList<Biology> listBiology = new ArrayList<>();
+                        for (Cell an : field.WolfgetNeighbour(row, col)) {
+                            if (an instanceof Biology) {
+                                listBiology.add((Biology) an);
                             }
-                            if (!listBiology.isEmpty()) {
-                                Biology prey = wolf.eat(listBiology);
-                                if (prey != null) {
-                                    if (prey instanceof Human) {
-                                        wolf.huntHumanFlag = true;
-                                        if (prey instanceof Actor) {
-                                            screech.play();
-                                        }
-                                    }
-                                    field.instead(wolf, prey);
-                                    flag = true;
+                        }
+                        if (!listBiology.isEmpty()) {
+                            Biology prey = wolf.eat(listBiology);
+                            if (prey != null) {
+                                if (prey instanceof Human) {
+                                    screech.play();
                                 }
+                                field.replace(wolf, prey);
+                                flag = true;
                             }
-                        } else {
-                            wolf.huntHumanFlag = false;
-                            flag = true;
                         }
                     } else {//其他动物捕食范围为周围一圈
                         ArrayList<Biology> listBiology = new ArrayList<>();
@@ -125,7 +118,7 @@ public class Round {
                         if (!listBiology.isEmpty()) {
                             Biology prey = animal.eat(listBiology);
                             if (prey != null) {
-                                field.instead(animal, prey);
+                                field.replace(animal, prey);
                                 flag = true;
                             }
                         }
@@ -134,11 +127,10 @@ public class Round {
                     Cell baby = animal.breed();
                     if (baby != null) {
                         field.placeRandomAdj(row, col, baby);
-//                        isContains.add(baby);
                     }
                     // move
                     if (!flag) {
-                        Location loc = animal.move(field.getFreeNeighbour(row, col));
+                        Location loc = animal.move(animal.lookAround(field));
                         if (loc != null) {
                             field.move(row, col, loc);
                         }
@@ -167,12 +159,16 @@ public class Round {
                 Cell baby = biology.breed();
                 if (baby != null) {
                     field.placeRandomAdj(row, col, baby);
-//                    isContains.add(baby);
                 }
             }
 
         } else if (biology != null && !biology.isAlive()) {
+            // 死亡
             field.remove(row, col);
+            // 尸体上长出植物
+            Plant cell = new Plant(Cell.ONE_YEAR_DAYS);
+            cell.setVersion(version);
+            field.place(row, col, cell);
         }
     }
 
