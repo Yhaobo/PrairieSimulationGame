@@ -2,62 +2,70 @@ package controller;
 
 import model.Field;
 import model.Round;
-import model.entity.Location;
+import model.interfaces.Player;
 import view.View;
 
 import javax.swing.*;
-import java.applet.Applet;
-import java.applet.AudioClip;
 import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.*;
+import java.lang.reflect.InvocationTargetException;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
+/**
+ * @author Yhaobo
+ */
 public class PrairieStory extends JFrame implements KeyListener {
     private static Field field;
-    private View theView;
+    private View view;
+    private JLabel label;
     private Round round;
+    private Player player;
     private static File archive = new File("存档.data");
     private volatile boolean isPause;
     private volatile boolean isRestart;
     private volatile boolean isExit;
-    private long speed = 10L;
+    private int speed = 10;
     /**
      * 既是时间(回合数)也是版本号
      */
     private long roundNumber;
     /**
-     * 像素宽
+     * 窗口像素宽
      */
-    private int x;
+    private int windowWidth;
     /**
-     * 像素高
+     * 窗口像素高
      */
-    private int y;
+    private int windowHeight;
     /**
-     * 格子的边长
+     * 格子的边长(大小)
      */
-    private static final byte GRID_SIZE = 10;
-    //    private Actor actor;
-    private static AudioClip audioClip;
+    private static final byte GRID_SIZE = 7;
+
+    int threadNum = Runtime.getRuntime().availableProcessors() / 2;
+    private ThreadPoolExecutor threadPool = new ThreadPoolExecutor(1, threadNum,
+            100, TimeUnit.SECONDS, new ArrayBlockingQueue<>(threadNum * 3));
 
     public PrairieStory(boolean isNewGame) {
         Dimension d = Toolkit.getDefaultToolkit().getScreenSize();
-        x = (int) (d.getWidth() * .9);
-        y = (int) (d.getHeight() * .9);
+        windowWidth = (int) (d.getWidth() * 0.95);
+        windowHeight = (int) (d.getHeight() * 0.95);
         if (isNewGame) {
 //            actor = new Actor();
-            field = new Field(x / GRID_SIZE, (y - 70) / GRID_SIZE);
+            field = new Field(windowWidth / GRID_SIZE, (windowHeight - 70) / GRID_SIZE);
             //初始化
             field.init();
         } else {
-//            actor = field.getActor();
-            field.initAudio();
+            player = field.getPlayer();
             roundNumber = field.getVersion();
         }
-        init();
+        this.init();
 //        while (actor.isAlive()) {
 //            if (!actor.move().equals(actor.getLocation())) {
 //                //如果没有操作,则不执行
@@ -79,39 +87,51 @@ public class PrairieStory extends JFrame implements KeyListener {
     }
 
     public static void main(String[] args) {
-        PrairieStory game = null;
         try {
-            if (archive.exists()) {
-                try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(archive))) {
-                    field = (Field) in.readObject();
+            final PrairieStory[] game = {null};
+            SwingUtilities.invokeAndWait(() -> {
+                try {
+                    if (archive.exists()) {
+                        try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(archive))) {
+                            field = (Field) in.readObject();
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                            archive.delete();
+                            throw e;
+                        }
+                        game[0] = new PrairieStory(false);
+
+//                        //创建一个选择弹出窗口，默认三选项：是，否，取消，返回值对应为0,1,2
+//                        int num = JOptionPane.showConfirmDialog(null, "是否扮演<恐怖直立猿>?");
+//                        if (num == 0) {
+//                            game[0].player = new HumanPlayer();
+//                        } else if (num == 1) {
+//                            game[0].player = new WolfPlayer();
+//                        } else {
+//                            System.exit(0);
+//                        }
+                    } else {
+                        game[0] = new PrairieStory(true);
+                    }
                 } catch (Exception e) {
                     e.printStackTrace();
-                    archive.delete();
-                    throw e;
+                    game[0] = new PrairieStory(true);
                 }
-                game = new PrairieStory(false);
-
-                //创建一个选择弹出窗口，默认三选项：是，否，取消，返回值对应为0,1,2
-                int num = JOptionPane.showConfirmDialog(null, "是否继续上次的游戏?");
-                if (num == 0) {
-//                story.start();
-                } else if (num == 1) {
-                    game.dispose();
-                    if (audioClip != null) {
-                        audioClip.stop();
-                    }
-                    game = new PrairieStory(true);
-                } else {
-                    System.exit(0);
-                }
-            } else {
-                game = new PrairieStory(true);
+            });
+            if (game[0] != null) {
+                game[0].view.repaint();
+                game[0].start();
             }
-        } catch (Exception e) {
+        } catch (InterruptedException | InvocationTargetException e) {
             e.printStackTrace();
-            game = new PrairieStory(true);
         }
-        game.start();
+    }
+
+    private void restart() {
+        field.init();
+        roundNumber = 0;
+        view.setStartTime(System.currentTimeMillis());
+        isRestart = false;
     }
 
     private void start() {
@@ -119,9 +139,7 @@ public class PrairieStory extends JFrame implements KeyListener {
             while (!isPause) {
                 if (isRestart) {
                     // 游戏重置
-                    field.init();
-                    roundNumber = 0;
-                    isRestart = false;
+                    restart();
                 }
                 step();
                 try {
@@ -130,26 +148,26 @@ public class PrairieStory extends JFrame implements KeyListener {
                     e.printStackTrace();
                 }
             }
+            try {
+                Thread.sleep(200);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
+        // 游戏结束之后自动保存
         saveToDisk();
     }
 
     private void init() {
-        try {
-            audioClip = Applet.newAudioClip(this.getClass().getResource("/resource/背景音乐.wav"));
-            audioClip.loop();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
         addKeyListener(this);
-        theView = new View(field, GRID_SIZE);
-        round = new Round(field);
-        theView.setBackground(new Color(255, 148, 0));
+        view = new View(field, GRID_SIZE);
+        round = new Round(field, view, threadPool);
+        view.setBackground(new Color(255, 148, 0));
 //        theView.setSize(0, 0);  //发现panel组件设置大小没效果, 原因是布局管理器layout
 
         setTitle("青青草原的故事");
-        setSize(x, y);
-        setFrameCenter(this);//窗口左上角位置设置为屏幕中间
+        setSize(windowWidth, windowHeight);
+        setWindowCenter(this);
 //        setLayout(new FlowLayout());
 
         //关闭窗口时自动存档
@@ -164,26 +182,21 @@ public class PrairieStory extends JFrame implements KeyListener {
         //创建新的面板区域
         JPanel panel = new JPanel();
         panel.setBackground(Color.LIGHT_GRAY);
-        JLabel label = new JLabel();
+        label = new JLabel();
         label.setFont(new Font("楷体", Font.BOLD, 20));
         label.setText("操作说明: 通过【方向键】(精确)或【W A S D】(快速) 来移动, 按【空格键】可以自动捕食范围内的猎物(食物)");
         panel.add(label);
-//        panel.add(btnPause);
-//        panel.add(btnStep);
-//        panel.add(button);
-//        panel.add(speedUp);
-//        panel.add(speedDown);
-//        panel.setBackground(Color.black);
 
-        add(theView, BorderLayout.CENTER);
+        add(view, BorderLayout.CENTER);
         add(panel, BorderLayout.SOUTH);
 //        add(btnPause);
 //        add(btnStep);
-//        pack();
+        //窗口不能改变大小
         setResizable(false);
-        setVisible(true);
+        //窗口自适应内容大小
         pack();
         requestFocus();
+        setVisible(true);
 
 //        setBackground(Color.orange);
 //        getContentPane().setBackground(Color.BLUE);
@@ -193,8 +206,7 @@ public class PrairieStory extends JFrame implements KeyListener {
 //                if (!theView.isDie()) {
         try (ObjectOutputStream out = new ObjectOutputStream(
                 new FileOutputStream(archive))) {
-            field.clearAudio();
-            field.setVersion(roundNumber);
+            field.setVersion((int) roundNumber);
             out.writeObject(field);
         } catch (FileNotFoundException e1) {
             e1.printStackTrace();
@@ -209,14 +221,14 @@ public class PrairieStory extends JFrame implements KeyListener {
         System.exit(0);
     }
 
-    private static void setFrameCenter(JFrame frame) {
+    private static void setWindowCenter(JFrame frame) {
         Toolkit kit = Toolkit.getDefaultToolkit();
         Dimension d = kit.getScreenSize();
         double screenWidth = d.getWidth();
         double screenHeight = d.getHeight();
         int width = frame.getWidth();
         int height = frame.getHeight();
-        frame.setLocation((int) (screenWidth - width) / 2, (int) (screenHeight - height) / 2);
+        frame.setLocation((int) (screenWidth - width) / 2, (int) (screenHeight - height) / 3);
     }
 
     @Override
@@ -226,9 +238,9 @@ public class PrairieStory extends JFrame implements KeyListener {
 
     @Override
     public void keyPressed(KeyEvent e) {
-        System.out.println(e.getKeyCode());
-        Location location = null;
-        switch (e.getKeyCode()) {
+//        System.out.println(e.getKeyCode());
+//        Location location = null;
+//        switch (e.getKeyCode()) {
 //            case KeyEvent.VK_UP:
 //                location = actor.front();
 //                break;
@@ -253,14 +265,11 @@ public class PrairieStory extends JFrame implements KeyListener {
 //            case KeyEvent.VK_D:
 //                actor.right = true;
 //                break;
-            case 32://空格自动捕食
-                location = new Location(-1, -1);
-                break;
-            case 10://回车
-                location = new Location(-100, -100);
-                break;
-        }
-        if (location != null) {
+//            case 32://空格
+//                break;
+//            case 10://回车
+//                break;
+//        }
 //            if (actor.isAlive() && field.actorMove(actor, location)) {
 //                actorAction();
 //            } else {
@@ -268,17 +277,32 @@ public class PrairieStory extends JFrame implements KeyListener {
 //                    theView.die();
 //                }
 //            theView.repaint();
-            if (e.getKeyCode() == 10) {
-//                if (audioClip != null) {
-//                    audioClip.stop();
-//                }
-//                round.stopAudio();
-                isRestart = true;
-            } else if (e.getKeyCode() == 32) {
-                isPause = !isPause;
+        if (e.getKeyCode() == 8) {
+            isPause = false;
+            isRestart = true;
+        } else if (e.getKeyCode() == 32) {
+            if (!isPause) {
+                isPause = true;
+                try {
+                    Thread.sleep(200);
+                } catch (InterruptedException exception) {
+                    exception.printStackTrace();
+                }
             }
-//            }
+//            System.out.println("getCorePoolSize:"+threadPool.getCorePoolSize());
+//            System.out.println("getPoolSize:"+threadPool.getPoolSize());
+//            System.out.println("getMaximumPoolSize:"+threadPool.getMaximumPoolSize());
+//            System.out.println("getActiveCount:"+threadPool.getActiveCount());
+//            System.out.println("getLargestPoolSize:"+threadPool.getLargestPoolSize());
+//            System.out.println("getTaskCount:"+threadPool.getTaskCount());
+//            System.out.println("getCompletedTaskCount:"+threadPool.getCompletedTaskCount());
+
+            if (threadPool.getTaskCount() == threadPool.getCompletedTaskCount()) {
+                threadPool.execute(this::step);
+            }
         }
+//            }
+
     }
 
     @Override
@@ -300,14 +324,19 @@ public class PrairieStory extends JFrame implements KeyListener {
     }
 
     private void step() {
-        theView.setTime(++roundNumber);
+        view.setTime(++roundNumber);
         round.oneRound((int) roundNumber);
-        theView.repaint();
-//        if (actor.getRemainingTime() > 0) {
-//            label.setText("注意! 你将在 " + actor.getRemainingTime() + " 天后饿死! 可以通过【捕食羊、狼(危险)或者吃植物】来增加或者维持生命! 小心被狼吃了!");
-//        } else {
-//            label.setFont(new Font("楷体", 3, 20));
-//            label.setText("有限的食物永远是导致大部分生物死亡的主要原因! 所以为了生存, 努力捕猎吧! (植物只能维持温饱)");
+        view.repaint();
+//        if (player instanceof Human) {
+//            Human player = (Human) this.player;
+//            if (player.getRemainTime() > 0) {
+//                label.setText("注意! 你将在 " + player.getRemainTime() + " 天后饿死! 可以通过【捕食羊、狼(危险)或者吃植物】来增加或者维持生命! 小心被狼吃了!");
+//            } else {
+//                label.setFont(new Font("楷体", 3, 20));
+//                label.setText("有限的食物永远是导致大部分生物死亡的主要原因! 所以为了生存, 努力捕猎吧! (植物只能维持温饱)");
+//            }
+//        } else if (player instanceof Wolf) {
+//
 //        }
 
     }

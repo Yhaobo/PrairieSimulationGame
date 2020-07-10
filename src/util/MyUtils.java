@@ -1,4 +1,4 @@
-package model;
+package util;
 
 import model.entity.Location;
 
@@ -16,7 +16,7 @@ public class MyUtils {
      * @param radius
      * @return
      */
-    public static List<Location> generateVIEW_SCOPE(int radius) {
+    public static List<Location> generateSenseSope(int radius) {
         List<Location> locations = new ArrayList<>((int) (Math.pow(1 + 2 * radius, 2) - 1));
         int row = -1;
         int col = 0;
@@ -49,12 +49,5 @@ public class MyUtils {
             }
         }
         return locations;
-    }
-
-    public static void main(String[] args) {
-        List<Location> locations = generateVIEW_SCOPE(3);
-        for (Location location : locations) {
-            System.out.println(location);
-        }
     }
 }

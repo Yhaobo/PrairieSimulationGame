@@ -1,7 +1,8 @@
 package model.entity.biology.animal;
 
 import model.Field;
-import model.MyUtils;
+import util.ConstantNum;
+import util.MyUtils;
 import model.entity.Location;
 import model.entity.biology.Biology;
 import model.entity.biology.plant.Plant;
@@ -10,32 +11,35 @@ import model.interfaces.Cell;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class Sheep extends Animal {
     /**
-     * 视野范围
+     * 感官范围
      */
-    private static final List<Location> RELATIVE_SENSE_SCOPE = MyUtils.generateVIEW_SCOPE(5);
+    private static final List<Location> RELATIVE_SENSE_SCOPE = MyUtils.generateSenseSope(6);
 
     public Sheep() {
         this(0);
     }
 
     public Sheep(int aliveTime) {
-        super(aliveTime, aliveTime + 15, 2 * ONE_YEAR_DAYS, 12 * ONE_YEAR_DAYS);
+        super(aliveTime, aliveTime + 5, 2 * ConstantNum.ONE_YEAR_DAYS.value, 12 * ConstantNum.ONE_YEAR_DAYS.value);
     }
 
     @Override
     public boolean isReproducible() {
-        return aliveTime >= adultTime && (aliveTime % ONE_YEAR_DAYS / 10 == 0);
+        return aliveTime >= adultTime && (aliveTime % (ConstantNum.ONE_YEAR_DAYS.value / 12) == 0);
     }
 
     @Override
     public void draw(Graphics g, int x, int y, int size) {
-        g.setColor(new Color(250, 250, 250, (int) (getRemainTimePercent() * 255)));
-//        g.fillRect(x, y, size, size);
+        if (isAlive()) {
+            g.setColor(new Color(250, 250, 250, (int) (getRemainTimePercent() * 255)));
+        } else {
+            g.setColor(Color.BLACK);
+        }
         g.fillOval(x, y, size, size);
-
     }
 
     @Override
@@ -43,13 +47,13 @@ public class Sheep extends Animal {
         Sheep ret = null;
         if (isReproducible()) {
             ret = new Sheep();
-            ret.version = this.version;
+            ret.version = new AtomicInteger(this.version.get());
         }
         return ret;
     }
 
     @Override
-    public Biology eat(ArrayList<Biology> neighbour) {
+    public Biology eat(List<Biology> neighbour) {
         Biology ret = null;
         ArrayList<Plant> list = new ArrayList<>();
         for (Biology bio : neighbour) {
@@ -59,7 +63,7 @@ public class Sheep extends Animal {
         }
         if (!list.isEmpty()) {
             ret = list.get((int) (Math.random() * list.size()));
-            maxAliveTime += ONE_YEAR_DAYS / 12 / 6;
+            maxAliveTime += 2;
         }
         return ret;
     }
@@ -67,7 +71,7 @@ public class Sheep extends Animal {
     @Override
     public Location move(Location location) {
         Location ret = null;
-        if (location != null && Math.random() < 0.8) {
+        if (location != null && Math.random() < 0.75) {
             ret = location;
         }
         return ret;
@@ -75,7 +79,7 @@ public class Sheep extends Animal {
 
     @Override
     public Location lookAround(Field field) {
-        List<Location> freeNeighbour = field.getFreeNeighbour(getRow(), getColumn());
+        List<Location> freeNeighbour = field.getFreeAdjacentLocation(getRow(), getColumn(), 1);
         List<Location> locations = new ArrayList<>(2);
         List<Plant> plants = new ArrayList<>();
         for (Location relativeLocation : RELATIVE_SENSE_SCOPE) {

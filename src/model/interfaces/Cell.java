@@ -7,11 +7,7 @@ import java.io.Serializable;
 
 public interface Cell extends Serializable {
     long serialVersionUID = 42L;
-    int REMAIN_TIME_WARNING = 5;
-    /**
-     * 这个游戏中一年只有一百天
-     */
-    int ONE_YEAR_DAYS = 100;
+
 
     /**
      * 2D绘画

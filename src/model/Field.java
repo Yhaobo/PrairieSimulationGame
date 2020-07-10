@@ -1,18 +1,18 @@
 package model;
 
+import model.entity.Location;
 import model.entity.biology.Biology;
+import model.entity.biology.animal.Animal;
 import model.entity.biology.animal.Human;
 import model.entity.biology.animal.Sheep;
 import model.entity.biology.animal.Wolf;
 import model.entity.biology.plant.Plant;
-import model.entity.Location;
 import model.interfaces.Cell;
+import model.interfaces.Player;
+import util.ConstantNum;
+import util.MyUtils;
 
-import java.applet.Applet;
-import java.applet.AudioClip;
-import java.io.File;
 import java.io.Serializable;
-import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -23,38 +23,47 @@ import java.util.List;
  */
 public class Field implements Serializable {
     private static final long serialVersionUID = 42L;
-    private static final List<Location> adjacent = MyUtils.generateVIEW_SCOPE(1);
     private final int width;
     private final int height;
     /**
      * 由Cell组成的矩阵
      */
-    private volatile Cell[][] field;
-    //    private Actor actor;
-    private AudioClip wolfAudio;
-    private AudioClip sheepAudio;
+    private final Cell[][] cells;
+    private Player player;
+
     /**
      * 存档时才保存的版本号
      */
-    private long version;
+    private int version;
+
+    /**
+     * 为了提高性能,把半径从1到Plant.BREED_SCOPE的相对位置都生成好
+     */
+    private static final List<List<Location>> RELATIVE_LOCATION_LISTS = new ArrayList<>(Plant.BREED_SCOPE);
+
+    static {
+        for (int i = 0; i < Plant.BREED_SCOPE; i++) {
+            RELATIVE_LOCATION_LISTS.add(MyUtils.generateSenseSope(i + 1));
+        }
+    }
 
     public Field(int width, int height) {
         this.width = width;
         this.height = height;
         System.out.println("格子数: " + width * height);
-        this.field = new Cell[height][width];
+        this.cells = new Cell[height][width];
         try {
-            wolfAudio = Applet.newAudioClip(this.getClass().getResource("/resource/狼叫声.wav"));
-            sheepAudio = Applet.newAudioClip(this.getClass().getResource("/resource/羊叫声.wav"));
+
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    //    public Actor getActor() {
-//        return actor;
-//    }
-    public void setVersion(long version) {
+    public Player getPlayer() {
+        return player;
+    }
+
+    public void setVersion(int version) {
         this.version = version;
     }
 
@@ -68,17 +77,17 @@ public class Field implements Serializable {
             for (int col = 0; col < width; col++) {
                 double probability = Math.random();
                 if (probability < 0.001) {
-                    place(row, col, new Human((int) (Math.random() * 3650)));
-                } else if (probability < 0.005) {
-                    place(row, col, new Wolf((int) (Math.random() * 3650)));
-                } else if (probability < 0.02) {
-                    place(row, col, new Sheep((int) (Math.random() * 3650)));
+                    place(row, col, new Human((int) (Math.random() * ConstantNum.ONE_YEAR_DAYS.value)));
+                } else if (probability < 0.003) {
+                    place(row, col, new Wolf((int) (Math.random() * ConstantNum.ONE_YEAR_DAYS.value)));
+                } else if (probability < 0.03) {
+                    place(row, col, new Sheep((int) (Math.random() * ConstantNum.ONE_YEAR_DAYS.value)));
                 } else {
-                    place(row, col, new Plant((int) (Math.random() * 3650)));
+                    place(row, col, new Plant((int) (Math.random() * ConstantNum.ONE_YEAR_DAYS.value)));
                 }
             }
         }
-//        place(height / 2, width / 2, actor);
+        place(height / 2, width / 2, new Human());
     }
 
     public int getWidth() {
@@ -93,152 +102,134 @@ public class Field implements Serializable {
      * 放置格子(把动物放进去)
      */
     public void place(int row, int col, Cell cell) {
-        Cell biology = cell;
-        biology.setLocation(row, col);
-        field[row][col] = biology;
-//		return field[row][col];
+        cell.setLocation(row, col);
+        place(cell);
+    }
+
+    private void place(Cell cell) {
+        cells[cell.getRow()][cell.getColumn()] = cell;
     }
 
     public Cell getCell(int row, int col) {
-        return field[row][col];
+        if (row >= 0 && row < height && col >= 0 && col < width) {
+            return cells[row][col];
+        }
+        return null;
     }
 
     /**
-     * 得到周围一圈的所有cell
+     * 得到周围半径为radius的所有生物(包括已死亡)
      *
      * @param row
      * @param col
      * @return
      */
-    public Cell[] getNeighbour(int row, int col) {
-        ArrayList<Cell> list = new ArrayList<>();
-        for (Location loc : adjacent) {
-            int r = row + loc.getColumn();
-            int c = col + loc.getRow();
-            if (r > -1 && r < height && c > -1 && c < width && !(r == row && c == col)) {
-                list.add(field[r][c]);
+    public List<Biology> getNeighbour(int row, int col, int radius) {
+        List<Biology> list = new ArrayList<>((int) Math.pow((1 + radius * 2), 2) - 1);
+        List<Location> relativeLocations = RELATIVE_LOCATION_LISTS.get(radius - 1);
+        for (Location relativeLoc : relativeLocations) {
+            int r = row + relativeLoc.getRow();
+            int c = col + relativeLoc.getColumn();
+            Cell cell = this.getCell(r, c);
+            if (cell != null) {
+                list.add((Biology) cell);
             }
         }
-        return list.toArray(new Cell[list.size()]);
-    }
 
-    public Cell[] WolfgetNeighbour(int row, int col) {
-        ArrayList<Cell> list = new ArrayList<>();
-        for (int i = -2; i <= 2; i++) {
-            for (int j = -2; j <= 2; j++) {
-                int r = row + i;
-                int c = col + j;
-                if (r > -1 && r < height && c > -1 && c < width && !(r == row && c == col)) {
-                    list.add(field[r][c]);
-                }
-            }
-        }
-        return list.toArray(new Cell[list.size()]);
+        return list;
     }
 
     /**
-     * 获取最近一圈空的位置
+     * 获取周围半径为radius的空的位置
      *
      * @param row
      * @param col
      * @return
      */
-    public List<Location> getFreeNeighbour(int row, int col) {
-        ArrayList<Location> list = new ArrayList<>();
-
-        for (Location loc : adjacent) {
-            int r = row + loc.getColumn();
-            int c = col + loc.getRow();
-            if (r > -1 && r < height && c > -1 && c < width && field[r][c] == null) {
+    public List<Location> getFreeAdjacentLocation(int row, int col, int radius) {
+        ArrayList<Location> list = new ArrayList<>((int) Math.pow((1 + radius * 2), 2) - 1);
+        List<Location> relativeLocations = RELATIVE_LOCATION_LISTS.get(radius - 1);
+        for (Location relativeLoc : relativeLocations) {
+            int r = row + relativeLoc.getRow();
+            int c = col + relativeLoc.getColumn();
+            if (r >= 0 && r < height && c >= 0 && c < width && getCell(r, c) == null) {
+                // 位置不越界,且没有生物
                 list.add(new Location(r, c));
             }
         }
-        return list;
-    }
-
-    public List<Location> getNeighbourLocation(int row, int col) {
-        ArrayList<Location> list = new ArrayList<>();
-
-//		for (int i = -1; i < 2; i++) {
-//			for (int j = -1; j < 2; j++) {
-//				int r = row + i;
-//				int c = col + j;
-//				if (r > -1 && r < height && c > -1 && c < width && field[r][c] == null) {
-//					list.add(new Location(r, c));
-//				}
-//			}
-//		}
-
-        for (Location loc : adjacent) {
-            int r = row + loc.getColumn();
-            int c = col + loc.getRow();
-            if (r > -1 && r < height && c > -1 && c < width) {
-                list.add(new Location(r, c));
-            }
-        }
-        return list;
-    }
-//    public void average() {
-//        System.out.println(sum / count);
-//    }
-
-    public List<Location> PlantgetFreeNeighbour(int row, int col) {
-        ArrayList<Location> list = new ArrayList<>();
-        int scope = 10;//范围
-        for (int i = -scope; i <= scope; i++) {
-            for (int j = -scope; j <= scope; j++) {
-                int r = row + i;
-                int c = col + j;
-                if (r >= 0 && r < height && c >= 0 && c < width && field[r][c] == null) {
-                    list.add(new Location(r, c));
-                }
-            }
-        }
-//        for (Location loc : adjacent) {
-//            int r = row + loc.getColumn();
-//            int c = col + loc.getRow();
-//            if (r > -1 && r < height && c > -1 && c < width && field[r][c] == null) {
-//                list.add(new Location(r, c));
+//        for (int i = -radius; i <= radius; i++) {
+//            for (int j = -radius; j <= radius; j++) {
+//                int r = row + i;
+//                int c = col + j;
+//                if (r >= 0 && r < height && c >= 0 && c < width && getCell(r, c) == null) {
+//                    // 位置不越界,且没有生物
+//                    list.add(new Location(r, c));
+//                }
 //            }
 //        }
         return list;
     }
 
-    //放置新生命
-    public boolean placeRandomAdj(int row, int col, Cell cell) {
-        Biology biology = (Biology) cell;
-        boolean ret = false;
-        List<Location> freeAdj;
-        if (cell instanceof Plant) {
-            freeAdj = PlantgetFreeNeighbour(row, col);
-        } else {
-            freeAdj = getNeighbourLocation(row, col);
-        }
-        if (freeAdj.size() > 0) {
-            int idx = (int) (Math.random() * freeAdj.size());
-            int idxRow = freeAdj.get(idx).getRow();
-            int idxColumn = freeAdj.get(idx).getColumn();
-            biology.setLocation(idxRow, idxColumn);//设置坐标属性
-            field[idxRow][idxColumn] = biology;//放置
-            ret = true;
-        }
-        return ret;
-    }
-
-    public void remove(int row, int col) {
-        field[row][col] = null;
-    }
-
-    public void remove(Cell cell) {
-        here:
-        for (int row = 0; row < height; row++) {
-            for (int col = 0; col < width; col++) {
-                if (field[row][col] == cell) {
-                    field[row][col] = null;
-                    break here;
-                }
+    /**
+     * 获取周围半径为radius的位置
+     *
+     * @param row
+     * @param col
+     * @return
+     */
+    public List<Location> getNeighbourLocation(int row, int col, int radius) {
+        ArrayList<Location> list = new ArrayList<>((int) Math.pow((1 + radius * 2), 2) - 1);
+        List<Location> relativeLocations = RELATIVE_LOCATION_LISTS.get(radius - 1);
+        for (Location relativeLoc : relativeLocations) {
+            int r = row + relativeLoc.getRow();
+            int c = col + relativeLoc.getColumn();
+            if (r >= 0 && r < height && c >= 0 && c < width && !(getCell(r, c) instanceof Animal)) {
+                // 位置不越界,且没有动物
+                list.add(new Location(r, c));
             }
         }
+//        for (int i = -1; i <= radius; i++) {
+//            for (int j = -1; j <= radius; j++) {
+//                int r = row + i;
+//                int c = col + j;
+//                if (r >= 0 && r < height && c >= 0 && c < width && !(i == 0 && j == 0) && !(getCell(r, c) instanceof Animal)) {
+//                    // 位置不越界,且没有动物
+//                    list.add(new Location(r, c));
+//                }
+//            }
+//        }
+        return list;
+    }
+
+    /**
+     * 放置新生命
+     *
+     * @param row
+     * @param col
+     * @param cell
+     * @return
+     */
+    public void placeNewBiology(int row, int col, Cell cell) {
+        List<Location> freeAdjacentLocation;
+        if (cell instanceof Plant) {
+            freeAdjacentLocation = getFreeAdjacentLocation(row, col, Plant.BREED_SCOPE);
+        } else {
+            freeAdjacentLocation = getNeighbourLocation(row, col, 1);
+        }
+        if (!freeAdjacentLocation.isEmpty()) {
+            Location freeLocation = freeAdjacentLocation.get((int) (Math.random() * freeAdjacentLocation.size()));
+            //设置坐标属性
+            cell.setLocation(freeLocation.getRow(), freeLocation.getColumn());
+            place(cell);
+        }
+    }
+
+    private void remove(int row, int col) {
+        cells[row][col] = null;
+    }
+
+    public void remove(Biology biology) {
+        this.remove(biology.getRow(), biology.getColumn());
     }
 
     /**
@@ -248,14 +239,11 @@ public class Field implements Serializable {
      * @param prey   猎物
      */
     public void replace(Cell hunter, Cell prey) {
-        Biology hunterB = (Biology) hunter;
-        Biology preyB = (Biology) prey;
-        field[preyB.getRow()][preyB.getColumn()] = hunterB;
-        remove(hunterB.getRow(), hunterB.getColumn());
+        remove(hunter.getRow(), hunter.getColumn());
         // 猎人自身的位置属性更新
-        hunterB.setLocation(preyB.getRow(), preyB.getColumn());
+        hunter.setLocation(prey.getRow(), prey.getColumn());
+        place(hunter);
     }
-
 //    public boolean actorMove(Actor actor, Location loc) {
 ////        if (loc == null) {
 ////            return false;
@@ -337,26 +325,11 @@ public class Field implements Serializable {
         if (loc == null) {
             return;
         }
-        Biology biology = (Biology) field[row][col];
-        field[loc.getRow()][loc.getColumn()] = biology;
-        biology.setLocation(loc.getRow(), loc.getColumn());
-        remove(row, col);
-    }
-
-    /**
-     * AudioClip不支持序列化, 所以只能置空
-     */
-    public void clearAudio() {
-        wolfAudio = null;
-        sheepAudio = null;
-    }
-
-    public void initAudio() {
-        try {
-            wolfAudio = Applet.newAudioClip(new File("resource/狼叫声.wav").toURI().toURL());
-            sheepAudio = Applet.newAudioClip(new File("resource/羊叫声.wav").toURI().toURL());
-        } catch (MalformedURLException e) {
-            e.printStackTrace();
+        Cell cell = getCell(row, col);
+        if (cell != null) {
+            remove(row, col);
+            cell.setLocation(loc.getRow(), loc.getColumn());
+            place(cell);
         }
     }
 }

@@ -4,7 +4,6 @@ import model.Field;
 import model.entity.Location;
 import model.entity.biology.Biology;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public abstract class Animal extends Biology {
@@ -13,7 +12,7 @@ public abstract class Animal extends Biology {
         super(aliveTime, maxAliveTime, adultAge, maxLifetime);
     }
 
-    public abstract Biology eat(ArrayList<Biology> neighbour);
+    public abstract Biology eat(List<Biology> neighbour);
 
     public abstract Location move(Location location);
 
@@ -47,13 +46,14 @@ public abstract class Animal extends Biology {
             relativeCol = 1;
         }
         for (Location freeLocation : freeNeighbours) {
-            int sum = Math.abs(freeLocation.getRow() - protagonist.getRow() - relativeRow) + Math.abs(freeLocation.getColumn() - protagonist.getColumn() - relativeCol);
+            int sum = Math.abs((freeLocation.getRow() - protagonist.getRow() - relativeRow))
+                    + Math.abs(freeLocation.getColumn() - protagonist.getColumn() - relativeCol);
             if (sum == 0) {
                 // 直接靠近
-                return new Location(freeLocation.getRow(), freeLocation.getColumn());
+                return freeLocation;
             } else if (sum == 1) {
                 // 迂回靠近
-                locations.add(new Location(freeLocation.getRow(), freeLocation.getColumn()));
+                locations.add(freeLocation);
             }
         }
         return null;
@@ -83,9 +83,9 @@ public abstract class Animal extends Biology {
         for (Location freeLocation : freeNeighbour) {
             int sum = Math.abs(freeLocation.getRow() - protagonist.getRow() - relativeRow) + Math.abs(freeLocation.getColumn() - protagonist.getColumn() - relativeCol);
             if (sum == 0) {
-                return new Location(freeLocation.getRow(), freeLocation.getColumn());
+                return freeLocation;
             } else if (sum == 1) {
-                locations.add(new Location(freeLocation.getRow(), freeLocation.getColumn()));
+                locations.add(freeLocation);
             }
         }
         return null;

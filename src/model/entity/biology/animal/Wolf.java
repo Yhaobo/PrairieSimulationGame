@@ -1,7 +1,8 @@
 package model.entity.biology.animal;
 
 import model.Field;
-import model.MyUtils;
+import util.ConstantNum;
+import util.MyUtils;
 import model.entity.Location;
 import model.entity.biology.Biology;
 import model.interfaces.Cell;
@@ -9,30 +10,35 @@ import model.interfaces.Cell;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class Wolf extends Animal {
     /**
-     * 视野范围
+     * 感官范围
      */
-    private static final List<Location> RELATIVE_SENSE_SCOPE = MyUtils.generateVIEW_SCOPE(10);
+    private static final List<Location> RELATIVE_SENSE_SCOPE = MyUtils.generateSenseSope(10);
 
     public Wolf() {
         this(0);
     }
 
     public Wolf(int aliveTime) {
-        super(aliveTime, aliveTime + 50, 3 * ONE_YEAR_DAYS, 20 * ONE_YEAR_DAYS);
+        super(aliveTime, aliveTime + 5, 3 * ConstantNum.ONE_YEAR_DAYS.value, 20 * ConstantNum.ONE_YEAR_DAYS.value);
     }
 
     @Override
     public boolean isReproducible() {
-        return aliveTime >= adultTime && (aliveTime % ONE_YEAR_DAYS / 5 == 0);
+        return aliveTime >= adultTime && (aliveTime % (ConstantNum.ONE_YEAR_DAYS.value / 6) == 0);
     }
 
     @Override
     public void draw(Graphics g, int x, int y, int size) {
-        g.setColor(new Color(255, 0, 0, (int) (getRemainTimePercent() * 255)));
-        g.fill3DRect(x, y, size, (int) (size / 1.2), true);
+        if (isAlive()) {
+            g.setColor(new Color(255, 0, 0, (int) (getRemainTimePercent() * 255)));
+        } else {
+            g.setColor(Color.BLACK);
+        }
+        g.fill3DRect(x, y, size, size, true);
 //        g.fillArc(x,y,size,size,0,360);
 //        int[] xPoints = new int[]{x + size / 2, x, x + size};
 //        int[] yPoints = new int[]{y, y + size, y + size};
@@ -44,32 +50,33 @@ public class Wolf extends Animal {
         Wolf ret = null;
         if (isReproducible()) {
             ret = new Wolf();
-            ret.version = this.version;
+            ret.version = new AtomicInteger(this.version.get());
         }
         return ret;
     }
 
     @Override
-    public Biology eat(ArrayList<Biology> neighbour) {
-        Biology ret = null;
-        ArrayList<Biology> sheeps = new ArrayList<>();
-        ArrayList<Human> humans = new ArrayList<>();
-        for (Biology bio : neighbour) {
-            if (bio instanceof Sheep) {
-                sheeps.add(bio);
+    public Biology eat(List<Biology> neighbour) {
+//        ArrayList<Biology> sheeps = new ArrayList<>();
+//        ArrayList<Human> humans = new ArrayList<>();
+        for (Biology prey : neighbour) {
+            if (prey instanceof Sheep) {
+                maxAliveTime += ConstantNum.ONE_YEAR_DAYS.value / 12 / 2 + prey.getRemainTime() / 2;
+                return prey;
             }
-            if (bio instanceof Human) {
-                humans.add((Human) bio);
+            if (prey instanceof Human) {
+                maxAliveTime += ConstantNum.ONE_YEAR_DAYS.value / 12 / 2 + prey.getRemainTime();
+                return prey;
             }
         }
-        if (!sheeps.isEmpty()) {
-            ret = sheeps.get((int) (Math.random() * sheeps.size()));
-            maxAliveTime += ONE_YEAR_DAYS / 12 / 2;
-        } else if (!humans.isEmpty()) {
-            ret = humans.get((int) (Math.random() * humans.size()));
-            maxAliveTime += ONE_YEAR_DAYS / 12 / 2;
-        }
-        return ret;
+//        if (!sheeps.isEmpty()) {
+//            prey = sheeps.get((int) (Math.random() * sheeps.size()));
+//            maxAliveTime += ConstantNum.ONE_YEAR_DAYS.value / 12 / 2 + prey.getRemainTime() / 2;
+//        } else if (!humans.isEmpty()) {
+//            prey = humans.get((int) (Math.random() * humans.size()));
+//            maxAliveTime += ConstantNum.ONE_YEAR_DAYS.value / 12 / 2 + prey.getRemainTime();
+//        }
+        return null;
     }
 
     @Override
@@ -83,7 +90,7 @@ public class Wolf extends Animal {
 
     @Override
     public Location lookAround(Field field) {
-        List<Location> freeNeighbour = field.getFreeNeighbour(getRow(), getColumn());
+        List<Location> freeNeighbour = field.getFreeAdjacentLocation(getRow(), getColumn(), 1);
         List<Location> locations = new ArrayList<>(2);
         if (freeNeighbour.isEmpty()) {
             return null;

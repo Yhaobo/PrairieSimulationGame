@@ -1,16 +1,15 @@
-package model;
+package model.entity.biology.animal;
 
-import model.entity.biology.animal.Human;
 import model.entity.Location;
-import model.interfaces.Protagonist;
+import model.interfaces.Player;
 
-public class Actor extends Human implements Protagonist {
+public class HumanPlayer extends Human implements Player {
     public boolean front;
     public boolean left;
     public boolean right;
     public boolean back;
 
-    public Actor() {
+    public HumanPlayer() {
         super(0,-1);
     }
 
@@ -24,9 +23,6 @@ public class Actor extends Human implements Protagonist {
         return null;
     }
 
-    public int getRemainingTime() {
-        return maxAliveTime - aliveTime;
-    }
 
     public Location move() {
         Location location = new Location(getRow(), getColumn());

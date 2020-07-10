@@ -1,7 +1,12 @@
 package model.entity.biology;
 
 import model.entity.Location;
+import model.entity.biology.plant.Plant;
 import model.interfaces.Cell;
+import model.interfaces.Player;
+import util.ConstantNum;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * 生物
@@ -9,7 +14,7 @@ import model.interfaces.Cell;
 public abstract class Biology implements Cell {
     private boolean isAlive = true;
     private Location location;
-    protected int version;
+    protected AtomicInteger version = new AtomicInteger(0);
 
     /**
      * 最大寿命
@@ -27,6 +32,7 @@ public abstract class Biology implements Cell {
      * 存活时间
      */
     protected int aliveTime;
+    protected int deathTime;
 
     public Biology(int aliveTime, int maxAliveTime, int adultTime, int maxLifetime) {
         this.maxAliveTime = maxAliveTime;
@@ -36,13 +42,13 @@ public abstract class Biology implements Cell {
     }
 
     @Override
-    public synchronized boolean compareVersion(int newVersion) {
-        if (newVersion - 1 == version) {
-            version = newVersion;
+    public boolean compareVersion(int newVersion) {
+        if (version.compareAndSet(newVersion - 1, newVersion)) {
             return true;
         } else {
-            if (version != newVersion) {
-                System.out.println("版本控制异常,version="+version+",newVersion="+newVersion);
+            if (version.get() != newVersion) {
+                System.out.println("版本控制异常,version=" + version + ",newVersion=" + newVersion);
+//                version = newVersion;
             }
             return false;
         }
@@ -50,9 +56,9 @@ public abstract class Biology implements Cell {
 
     @Override
     public double getRemainTimePercent() {
-        int remainTime = maxAliveTime - aliveTime;
-        if (remainTime <= REMAIN_TIME_WARNING) {
-            return (double) (Math.max(remainTime, 0)) / REMAIN_TIME_WARNING;
+        int remainTime = getRemainTime() + 1;
+        if (remainTime <= ConstantNum.REMAIN_TIME_WARNING.value) {
+            return (double) (Math.max(remainTime, 0)) / ConstantNum.REMAIN_TIME_WARNING.value;
         }
         return 1;
     }
@@ -80,8 +86,12 @@ public abstract class Biology implements Cell {
      * @return 如果死亡返回false, 活着则返回true
      */
     public boolean grow() {
-        if (maxLifetime <= 0) {
-            // 主角寿命无限
+        if (this.isDie()) {
+            return false;
+        }
+        if (this instanceof Player || this instanceof Plant) {
+            aliveTime++;
+            // 玩家和植物寿命无限
             return true;
         }
         if (++aliveTime > maxAliveTime || aliveTime > maxLifetime) {
@@ -118,6 +128,36 @@ public abstract class Biology implements Cell {
 
     @Override
     public synchronized void setVersion(int version) {
-        this.version = version;
+        this.version.set(version);
+    }
+
+    public int getRemainTime() {
+        return maxAliveTime - aliveTime;
+    }
+
+    /**
+     * 死亡时间+1
+     *
+     * @return 死亡时间如果超过指定时间, 则返回false; 其他情况返回true
+     */
+    public boolean increaseDeathTime() {
+        return deathTime++ <= (ConstantNum.ONE_YEAR_DAYS.value / 12);
+    }
+
+    public boolean isDie() {
+        return !isAlive;
+    }
+
+    @Override
+    public String toString() {
+        return this.getClass().getSimpleName() + "{" +
+                "isAlive=" + isAlive +
+                ", location=" + location +
+                ", version=" + version +
+                ", maxLifetime=" + maxLifetime +
+                ", maxAliveTime=" + maxAliveTime +
+                ", adultTime=" + adultTime +
+                ", aliveTime=" + aliveTime +
+                '}';
     }
 }
