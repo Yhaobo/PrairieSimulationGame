@@ -3,9 +3,17 @@ package model.entity.biology.animal;
 import model.Field;
 import model.entity.Location;
 import model.entity.biology.Biology;
+import model.entity.biology.plant.Plant;
+import model.interfaces.Cell;
 
+import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * 动物
+ *
+ * @author Yhaobo
+ */
 public abstract class Animal extends Biology {
 
     public Animal(int aliveTime, int maxAliveTime, int adultAge, int maxLifetime) {
@@ -15,6 +23,49 @@ public abstract class Animal extends Biology {
     public abstract Biology eat(List<Biology> neighbour);
 
     public abstract Location move(Location location);
+
+    /**
+     * 当maxAliveTime大于最大寿命时, 就不再需要吃东西了
+     *
+     * @return
+     */
+    public boolean isNoNeedEat() {
+        return maxAliveTime > maxLifetime;
+    }
+
+    /**
+     * 远离植物, 否则不动
+     *
+     * @param field
+     * @param senseScope 感官范围
+     * @return
+     */
+    public Location awayPlant(Field field, List<Location> senseScope) {
+        List<Location> freeAdjacentLocations = field.getFreeAdjacentLocations(this.getRow(), this.getColumn(), getSenseRadius());
+        if (freeAdjacentLocations == null) {
+            return null;
+        }
+        ArrayList<Location> locations = new ArrayList<>();
+        for (Location relativeLoc : senseScope) {
+            Cell cell = field.getCell(this.getRow() + relativeLoc.getRow(), this.getColumn() + relativeLoc.getColumn());
+            if (cell instanceof Plant) {
+                Location awayLocation = away(relativeLoc, this, freeAdjacentLocations, locations);
+                if (awayLocation != null) {
+                    return awayLocation;
+                } else if (!locations.isEmpty()) {
+                    return locations.get((int) (Math.random() * locations.size()));
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 返回感官半径
+     *
+     * @return 返回
+     */
+    public abstract int getSenseRadius();
 
     /**
      * 环顾视野之内,远离危险,靠近食物
@@ -90,4 +141,11 @@ public abstract class Animal extends Biology {
         }
         return null;
     }
+
+    /**
+     * 得到感官范围内的所有相对位置
+     *
+     * @return
+     */
+    public abstract List<Location> getSenseScopeRelativeLocation();
 }

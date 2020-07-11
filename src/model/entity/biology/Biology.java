@@ -48,7 +48,7 @@ public abstract class Biology implements Cell {
         } else {
             if (version.get() != newVersion) {
                 System.out.println("版本控制异常,version=" + version + ",newVersion=" + newVersion);
-//                version = newVersion;
+                version.set(newVersion);
             }
             return false;
         }
@@ -94,7 +94,7 @@ public abstract class Biology implements Cell {
             // 玩家和植物寿命无限
             return true;
         }
-        if (++aliveTime > maxAliveTime || aliveTime > maxLifetime) {
+        if (aliveTime++ > maxAliveTime || aliveTime > maxLifetime) {
             die();
             return false;
         }
@@ -138,10 +138,10 @@ public abstract class Biology implements Cell {
     /**
      * 死亡时间+1
      *
-     * @return 死亡时间如果超过指定时间, 则返回false; 其他情况返回true
+     * @return 死亡时间如果超过 指定时间+(maxAliveTime - aliveTime), 则返回false; 其他情况返回true
      */
     public boolean increaseDeathTime() {
-        return deathTime++ <= (ConstantNum.ONE_YEAR_DAYS.value / 12);
+        return (deathTime++ - (maxAliveTime - aliveTime)) <= (ConstantNum.ONE_YEAR_DAYS.value / 12);
     }
 
     public boolean isDie() {

@@ -39,10 +39,10 @@ public class Field implements Serializable {
     /**
      * 为了提高性能,把半径从1到Plant.BREED_SCOPE的相对位置都生成好
      */
-    private static final List<List<Location>> RELATIVE_LOCATION_LISTS = new ArrayList<>(Plant.BREED_SCOPE);
+    private static final List<List<Location>> RELATIVE_LOCATION_LISTS = new ArrayList<>(10);
 
     static {
-        for (int i = 0; i < Plant.BREED_SCOPE; i++) {
+        for (int i = 0; i < 10; i++) {
             RELATIVE_LOCATION_LISTS.add(MyUtils.generateSenseSope(i + 1));
         }
     }
@@ -50,7 +50,6 @@ public class Field implements Serializable {
     public Field(int width, int height) {
         this.width = width;
         this.height = height;
-        System.out.println("格子数: " + width * height);
         this.cells = new Cell[height][width];
         try {
 
@@ -72,6 +71,8 @@ public class Field implements Serializable {
     }
 
     public void init() {
+        System.out.println("宽:" + width + "\t高:" + height);
+        System.out.println("格子数: " + width * height);
 //        this.actor = actor;
         for (int row = 0; row < height; row++) {
             for (int col = 0; col < width; col++) {
@@ -110,6 +111,13 @@ public class Field implements Serializable {
         cells[cell.getRow()][cell.getColumn()] = cell;
     }
 
+    /**
+     * 根据行和列返回Cell
+     *
+     * @param row 行
+     * @param col 列
+     * @return
+     */
     public Cell getCell(int row, int col) {
         if (row >= 0 && row < height && col >= 0 && col < width) {
             return cells[row][col];
@@ -146,7 +154,7 @@ public class Field implements Serializable {
      * @param col
      * @return
      */
-    public List<Location> getFreeAdjacentLocation(int row, int col, int radius) {
+    public List<Location> getFreeAdjacentLocations(int row, int col, int radius) {
         ArrayList<Location> list = new ArrayList<>((int) Math.pow((1 + radius * 2), 2) - 1);
         List<Location> relativeLocations = RELATIVE_LOCATION_LISTS.get(radius - 1);
         for (Location relativeLoc : relativeLocations) {
@@ -212,7 +220,7 @@ public class Field implements Serializable {
     public void placeNewBiology(int row, int col, Cell cell) {
         List<Location> freeAdjacentLocation;
         if (cell instanceof Plant) {
-            freeAdjacentLocation = getFreeAdjacentLocation(row, col, Plant.BREED_SCOPE);
+            freeAdjacentLocation = getFreeAdjacentLocations(row, col, Plant.BREED_SCOPE);
         } else {
             freeAdjacentLocation = getNeighbourLocation(row, col, 1);
         }
@@ -317,19 +325,15 @@ public class Field implements Serializable {
     /**
      * 移动
      *
-     * @param row
-     * @param col
-     * @param loc 新位置
+     * @param animal 动物
+     * @param loc    新位置
      */
-    public void move(int row, int col, Location loc) {
-        if (loc == null) {
+    public void move(Animal animal, Location loc) {
+        if (loc == null || animal == null) {
             return;
         }
-        Cell cell = getCell(row, col);
-        if (cell != null) {
-            remove(row, col);
-            cell.setLocation(loc.getRow(), loc.getColumn());
-            place(cell);
-        }
+        remove(animal);
+        animal.setLocation(loc.getRow(), loc.getColumn());
+        place(animal);
     }
 }

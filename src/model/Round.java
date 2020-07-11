@@ -14,30 +14,63 @@ import java.applet.Applet;
 import java.applet.AudioClip;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ThreadPoolExecutor;
 
 /**
  * 每一回合的处理
  */
 public class Round {
-    private Field field;
-    private View view;
-    //惨叫声
+    private final Field field;
+    private final View view;
+    /**
+     * 惨叫声
+     */
     private static AudioClip screech;
-    //肚子好饿周星驰
+    /**
+     * 肚子好饿周星驰
+     */
     private static AudioClip hungry;
-    //婴儿开心笑声
+    /**
+     * 婴儿开心笑声
+     */
     private static AudioClip laughter;
+    /**
+     * 背景音乐
+     */
     private static AudioClip music;
-    private AudioClip wolfAudio;
-    private AudioClip sheepAudio;
+    /**
+     * 狼叫声
+     */
+    private static AudioClip wolfAudio;
+    /**
+     * 羊叫声
+     */
+    private static AudioClip sheepAudio;
 
-    private ThreadPoolExecutor threadPool;
+    /**
+     * 可用线程数
+     */
+    private final int availableThreadTotal;
 
-    public Round(Field field, View view, ThreadPoolExecutor threadPoolExecutor) {
+    /**
+     * 已废弃, 被Thread.yield()完美代替(性能翻倍)
+     * 用来防止并发带来的不一致性(每个线程执行到各自任务同步点的时候等待其他线程)
+     */
+    private CyclicBarrier cyclicBarrier;
+
+    /**
+     * 根据可用线程数来分配任务量(行)
+     */
+    private final int rowPart;
+
+    public Round(Field field, View view, int availableThreadTotal) {
         this.field = field;
         this.view = view;
-        this.threadPool = threadPoolExecutor;
+        this.availableThreadTotal = availableThreadTotal;
+        this.rowPart = field.getHeight() / availableThreadTotal;
+//        this.cyclicBarrier = new CyclicBarrier(availableThreadTotal);
         try {
             music = Applet.newAudioClip(this.getClass().getResource("/resource/背景音乐.wav"));
             music.loop();
@@ -56,32 +89,58 @@ public class Round {
      *
      * @param version 最新版本号
      */
-    public void oneRound(int version) {
-//        int threadNum = threadPool.getMaximumPoolSize();
-//        CountDownLatch countDownLatch = new CountDownLatch(threadNum);
-//        // 将Field按行分割为threadNum块, 每一块分配一个线程来执行
-//        for (int thread = 0; thread < threadNum; thread++) {
-//            int i = thread;
-//            threadPool.execute(() -> {
-//            int part = field.getHeight() / threadNum;
-//            int iPlusOne = i + 1;
-//            for (int row = i * part; row < (threadNum == iPlusOne ? field.getHeight() : part * iPlusOne); row++) {
-//                for (int col = 0; col < field.getWidth(); col++) {
-//                    cellActionStrategy(row, col, version);
-//                    countDownLatch.countDown();
-//                }
-//            }
-//            });
-//        }
-//        try {
-//            //保证线程都执行完之后才结束回合
-//            countDownLatch.await();
-//        } catch (InterruptedException e) {
-//            e.printStackTrace();
-//        }
-        for (int row = 0; row < field.getHeight(); row++) {
-            for (int col = 0; col < field.getWidth(); col++) {
-                cellActionStrategy(row, col, version);
+    public void oneRound(int version,ThreadPoolExecutor threadPoolExecutor) {
+        if (availableThreadTotal > 1) {
+            /*
+            并发执行
+            */
+            CountDownLatch countDownLatch = new CountDownLatch(availableThreadTotal);
+            // 将Field按行分割为availableThreadTotal个块, 每一块分配一个线程来执行
+            for (int thread = 0; thread < availableThreadTotal; thread++) {
+                int i = thread;
+                threadPoolExecutor.execute(() -> {
+                    int iPlusOne = i + 1;
+                    int startRow = i * rowPart;
+                    // 同步点(一般为任务的三分之一和三分之二两个位置)
+                    int syncPoint = startRow + (rowPart / 3);
+                    for (int row = startRow; row < (availableThreadTotal == iPlusOne ? field.getHeight() : rowPart * iPlusOne); row++) {
+                        for (int col = 0; col < field.getWidth(); col++) {
+                            if (row == syncPoint) {
+                                Thread.yield();
+                            /*
+                            下面代码的功能已被Thread.yield()完美代替(性能翻倍)
+                             */
+//                            try {
+//                                // 等待其他任务线程都执行了此方法才一起继续执行
+//                                cyclicBarrier.await();
+//
+//                            } catch (InterruptedException | BrokenBarrierException e) {
+//                                e.printStackTrace();
+//                            }
+                            }
+                            cellActionStrategy(row, col, version);
+                        }
+                    }
+                    countDownLatch.countDown();
+                });
+            }
+            try {
+                // 当前线程等待任务线程都执行完之后才继续执行
+                countDownLatch.await();
+                // 每回合重置
+//            cyclicBarrier.reset();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+        } else {
+            /*
+            非并发执行
+            */
+            for (int row = 0; row < field.getHeight(); row++) {
+                for (int col = 0; col < field.getWidth(); col++) {
+                    cellActionStrategy(row, col, version);
+                }
             }
         }
     }
@@ -104,10 +163,14 @@ public class Round {
                     move
                     注意: 移动之后位置改变了,不能用row和col来表示动物位置
                      */
-                    Location loc = animal.move(animal.lookAround(field));
-                    if (loc != null) {
-                        field.move(row, col, loc);
+                    Location loc;
+                    if (animal.isNoNeedEat()) {
+                        loc = animal.move(animal.awayPlant(field, animal.getSenseScopeRelativeLocation()));
+                    } else {
+                        loc = animal.move(animal.lookAround(field));
                     }
+                    field.move(animal, loc);
+
                     /*
                     eat
                      */
@@ -191,11 +254,10 @@ public class Round {
                         }
                     }
                 }
-
                 // 周围长出植物
                 Plant cell = new Plant();
                 cell.setVersion(version);
-                field.placeNewBiology(row, col, cell);
+                field.placeNewBiology(biology.getRow(), biology.getColumn(), cell);
             }
         }
     }
@@ -204,5 +266,8 @@ public class Round {
         screech.stop();
         hungry.stop();
         laughter.stop();
+        music.stop();
+        wolfAudio.stop();
+        sheepAudio.stop();
     }
 }

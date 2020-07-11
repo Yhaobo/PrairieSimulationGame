@@ -15,11 +15,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class Human extends Animal {
     private static final double PROBABILITY = 1;
-//    private boolean hero = false;
+
+    private static final int SENSE_RADIUS = 5;
     /**
      * 感官范围内的相对位置
      */
-    private static final List<Location> RELATIVE_SENSE_SCOPE = MyUtils.generateSenseSope(5);
+    private static final List<Location> RELATIVE_SENSE_SCOPE = MyUtils.generateSenseSope(SENSE_RADIUS);
 
     public Human() {
         this(0);
@@ -95,34 +96,42 @@ public class Human extends Animal {
     }
 
     @Override
+    public int getSenseRadius() {
+        return SENSE_RADIUS;
+    }
+
+    @Override
     public Location lookAround(Field field) {
-        List<Location> freeNeighbour = field.getFreeAdjacentLocation(getRow(), getColumn(), 1);
-        List<Location> locations = new ArrayList<>(2);
-        List<Plant> plants = new ArrayList<>();
+        List<Location> freeNeighbour = field.getFreeAdjacentLocations(getRow(), getColumn(), 1);
         if (freeNeighbour.isEmpty()) {
             return null;
         }
+        List<Location> locations = new ArrayList<>(2);
+        List<Plant> plants = new ArrayList<>();
+        // 直线位置(不需要绕障碍物)
+        Location directLocation;
         for (Location relativeLocation : RELATIVE_SENSE_SCOPE) {
             int row = getRow() + relativeLocation.getRow();
             int col = getColumn() + relativeLocation.getColumn();
             if (row > -1 && row < field.getHeight() && col > -1 && col < field.getWidth()) {
                 Cell cell = field.getCell(row, col);
                 if (cell != null) {
+                    // 狼和羊的优先级一样 (人为羊死,鸟为食亡)
                     if (cell instanceof Wolf) {
                         // 远离狼
-                        Location nearLocation = Animal.away(relativeLocation, this, freeNeighbour, locations);
-                        if (nearLocation != null) {
-                            return nearLocation;
+                        directLocation = Animal.away(relativeLocation, this, freeNeighbour, locations);
+                        if (directLocation != null) {
+                            return directLocation;
                         } else if (!locations.isEmpty()) {
-                            break;
+                            return locations.get((int) (Math.random() * locations.size()));
                         }
                     } else if (cell instanceof Sheep) {
                         // 靠近羊
-                        Location nearLocation = Animal.near(relativeLocation, this, freeNeighbour, locations);
-                        if (nearLocation != null) {
-                            return nearLocation;
-                        }else if (!locations.isEmpty()) {
-                            break;
+                        directLocation = Animal.near(relativeLocation, this, freeNeighbour, locations);
+                        if (directLocation != null) {
+                            return directLocation;
+                        } else if (!locations.isEmpty()) {
+                            return locations.get((int) (Math.random() * locations.size()));
                         }
                     } else if (cell instanceof Plant) {
                         plants.add((Plant) cell);
@@ -130,20 +139,26 @@ public class Human extends Animal {
                 }
             }
         }
-        // 如果只有植物,则选择最近的靠近
+
         if (!plants.isEmpty()) {
+            // 如果只有植物,则选择最近的靠近
             Plant firstPlant = plants.get(0);
-            Location nearLocation = Animal.near(new Location(firstPlant.getRow() - getRow(), firstPlant.getColumn() - getColumn()), this, freeNeighbour, locations);
-            if (nearLocation != null) {
-                return nearLocation;
+            directLocation = Animal.near(new Location(firstPlant.getRow() - getRow(), firstPlant.getColumn() - getColumn()), this, freeNeighbour, locations);
+            if (directLocation != null) {
+                return directLocation;
+            } else if (!locations.isEmpty()) {
+                return locations.get((int) (Math.random() * locations.size()));
             }
         }
-        if (!locations.isEmpty()) {
-            return locations.get(0);
-        }
         if (!freeNeighbour.isEmpty()) {
+            // 随机移动
             return freeNeighbour.get((int) (Math.random() * freeNeighbour.size()));
         }
         return null;
+    }
+
+    @Override
+    public List<Location> getSenseScopeRelativeLocation() {
+        return RELATIVE_SENSE_SCOPE;
     }
 }

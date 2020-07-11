@@ -2,6 +2,8 @@ package controller;
 
 import model.Field;
 import model.Round;
+import model.entity.biology.animal.HumanPlayer;
+import model.entity.biology.animal.WolfPlayer;
 import model.interfaces.Player;
 import view.View;
 
@@ -13,7 +15,7 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.*;
 import java.lang.reflect.InvocationTargetException;
-import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
@@ -30,7 +32,6 @@ public class PrairieStory extends JFrame implements KeyListener {
     private volatile boolean isPause;
     private volatile boolean isRestart;
     private volatile boolean isExit;
-    private int speed = 10;
     /**
      * 既是时间(回合数)也是版本号
      */
@@ -38,19 +39,24 @@ public class PrairieStory extends JFrame implements KeyListener {
     /**
      * 窗口像素宽
      */
-    private int windowWidth;
+    private final int windowWidth;
     /**
      * 窗口像素高
      */
-    private int windowHeight;
+    private final int windowHeight;
     /**
      * 格子的边长(大小)
      */
-    private static final byte GRID_SIZE = 7;
-
-    int threadNum = Runtime.getRuntime().availableProcessors() / 2;
-    private ThreadPoolExecutor threadPool = new ThreadPoolExecutor(1, threadNum,
-            100, TimeUnit.SECONDS, new ArrayBlockingQueue<>(threadNum * 3));
+    private static final byte GRID_SIZE = 2;
+    /**
+     * 系统可用cpu核心数
+     */
+    private final int availableProcessors = Runtime.getRuntime().availableProcessors() / 2;
+    /**
+     * 没有等待队列的线程池,且拒绝策略为调用者运行, 核心线程数和最大线程数都为系统可用cpu核心数
+     */
+    private final ThreadPoolExecutor threadPool = new ThreadPoolExecutor(availableProcessors, availableProcessors,
+            1, TimeUnit.MINUTES, new SynchronousQueue<>(), new ThreadPoolExecutor.CallerRunsPolicy());
 
     public PrairieStory(boolean isNewGame) {
         Dimension d = Toolkit.getDefaultToolkit().getScreenSize();
@@ -89,6 +95,7 @@ public class PrairieStory extends JFrame implements KeyListener {
     public static void main(String[] args) {
         try {
             final PrairieStory[] game = {null};
+            // swing相关的操作都交给事件处理线程
             SwingUtilities.invokeAndWait(() -> {
                 try {
                     if (archive.exists()) {
@@ -100,16 +107,21 @@ public class PrairieStory extends JFrame implements KeyListener {
                             throw e;
                         }
                         game[0] = new PrairieStory(false);
-
-//                        //创建一个选择弹出窗口，默认三选项：是，否，取消，返回值对应为0,1,2
-//                        int num = JOptionPane.showConfirmDialog(null, "是否扮演<恐怖直立猿>?");
-//                        if (num == 0) {
-//                            game[0].player = new HumanPlayer();
-//                        } else if (num == 1) {
-//                            game[0].player = new WolfPlayer();
-//                        } else {
-//                            System.exit(0);
-//                        }
+                        //创建一个选择弹出窗口，默认三选项：是，否，取消，返回值对应为0,1,2
+                        int result = JOptionPane.showConfirmDialog(null, "重开一局?", "", JOptionPane.YES_NO_OPTION);
+                        if (result == JOptionPane.YES_OPTION) {
+                            game[0].dispose();
+                            game[0].round.stopAudio();
+                            game[0] = new PrairieStory(true);
+                            result = JOptionPane.showConfirmDialog(null, "是否扮演<恐怖直立猿>?", "", JOptionPane.YES_NO_OPTION);
+                            if (result == JOptionPane.YES_OPTION) {
+                                game[0].player = new HumanPlayer();
+                            } else if (result == JOptionPane.NO_OPTION) {
+                                game[0].player = new WolfPlayer();
+                            } else {
+                                System.exit(0);
+                            }
+                        }
                     } else {
                         game[0] = new PrairieStory(true);
                     }
@@ -142,14 +154,9 @@ public class PrairieStory extends JFrame implements KeyListener {
                     restart();
                 }
                 step();
-                try {
-                    Thread.sleep(speed);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
             }
             try {
-                Thread.sleep(200);
+                Thread.sleep(500);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -161,7 +168,7 @@ public class PrairieStory extends JFrame implements KeyListener {
     private void init() {
         addKeyListener(this);
         view = new View(field, GRID_SIZE);
-        round = new Round(field, view, threadPool);
+        round = new Round(field, view, threadPool.getMaximumPoolSize());
         view.setBackground(new Color(255, 148, 0));
 //        theView.setSize(0, 0);  //发现panel组件设置大小没效果, 原因是布局管理器layout
 
@@ -289,14 +296,6 @@ public class PrairieStory extends JFrame implements KeyListener {
                     exception.printStackTrace();
                 }
             }
-//            System.out.println("getCorePoolSize:"+threadPool.getCorePoolSize());
-//            System.out.println("getPoolSize:"+threadPool.getPoolSize());
-//            System.out.println("getMaximumPoolSize:"+threadPool.getMaximumPoolSize());
-//            System.out.println("getActiveCount:"+threadPool.getActiveCount());
-//            System.out.println("getLargestPoolSize:"+threadPool.getLargestPoolSize());
-//            System.out.println("getTaskCount:"+threadPool.getTaskCount());
-//            System.out.println("getCompletedTaskCount:"+threadPool.getCompletedTaskCount());
-
             if (threadPool.getTaskCount() == threadPool.getCompletedTaskCount()) {
                 threadPool.execute(this::step);
             }
@@ -325,7 +324,7 @@ public class PrairieStory extends JFrame implements KeyListener {
 
     private void step() {
         view.setTime(++roundNumber);
-        round.oneRound((int) roundNumber);
+        round.oneRound((int) roundNumber, threadPool);
         view.repaint();
 //        if (player instanceof Human) {
 //            Human player = (Human) this.player;

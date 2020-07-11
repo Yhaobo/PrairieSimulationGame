@@ -13,7 +13,7 @@ public class Plant extends Biology {
     }
 
     public Plant(int aliveTime) {
-        super(aliveTime, Integer.MAX_VALUE, ConstantNum.ONE_YEAR_DAYS.value/6, Integer.MAX_VALUE);
+        super(aliveTime, Integer.MAX_VALUE, ConstantNum.ONE_YEAR_DAYS.value/12, Integer.MAX_VALUE);
     }
 
     @Override

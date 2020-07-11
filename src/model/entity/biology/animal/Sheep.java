@@ -14,10 +14,11 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class Sheep extends Animal {
+    private static final int SENSE_RADIUS = 7;
     /**
      * 感官范围
      */
-    private static final List<Location> RELATIVE_SENSE_SCOPE = MyUtils.generateSenseSope(6);
+    private static final List<Location> RELATIVE_SENSE_SCOPE = MyUtils.generateSenseSope(SENSE_RADIUS);
 
     public Sheep() {
         this(0);
@@ -79,9 +80,14 @@ public class Sheep extends Animal {
 
     @Override
     public Location lookAround(Field field) {
-        List<Location> freeNeighbour = field.getFreeAdjacentLocation(getRow(), getColumn(), 1);
+        List<Location> freeNeighbour = field.getFreeAdjacentLocations(getRow(), getColumn(), 1);
+        if (freeNeighbour == null) {
+            return null;
+        }
         List<Location> locations = new ArrayList<>(2);
         List<Plant> plants = new ArrayList<>();
+        // 直线位置(不需要绕障碍物)
+        Location directLocation;
         for (Location relativeLocation : RELATIVE_SENSE_SCOPE) {
             int row = getRow() + relativeLocation.getRow();
             int col = getColumn() + relativeLocation.getColumn();
@@ -89,10 +95,12 @@ public class Sheep extends Animal {
                 Cell cell = field.getCell(row, col);
                 if (cell != null) {
                     if (cell instanceof Wolf || cell instanceof Human) {
-                        // 远离狼和人
-                        Location nearLocation = Animal.away(relativeLocation, this, freeNeighbour, locations);
-                        if (nearLocation != null) {
-                            return nearLocation;
+                        // 优先远离狼和人 (胆小)
+                        directLocation = Animal.away(relativeLocation, this, freeNeighbour, locations);
+                        if (directLocation != null) {
+                            return directLocation;
+                        } else if (!locations.isEmpty()) {
+                            return locations.get((int) (Math.random() * locations.size()));
                         }
                     } else if (cell instanceof Plant) {
                         plants.add((Plant) cell);
@@ -100,21 +108,31 @@ public class Sheep extends Animal {
                 }
             }
         }
-        // 如果只有植物,则选择最近的靠近
         if (!plants.isEmpty()) {
+            // 如果只有植物,则选择最近的靠近
             Plant firstPlant = plants.get(0);
-            Location nearLocation = Animal.near(new Location(firstPlant.getRow() - getRow(), firstPlant.getColumn() - getColumn()), this, freeNeighbour, locations);
-            if (nearLocation != null) {
-                return nearLocation;
+            directLocation = Animal.near(new Location(firstPlant.getRow() - getRow(), firstPlant.getColumn() - getColumn()), this, freeNeighbour, locations);
+            if (directLocation != null) {
+                return directLocation;
+            } else if (!locations.isEmpty()) {
+                return locations.get((int) (Math.random() * locations.size()));
             }
         }
 
-        if (!locations.isEmpty()) {
-            return locations.get(0);
-        }
         if (!freeNeighbour.isEmpty()) {
+            // 随机移动
             return freeNeighbour.get((int) (Math.random() * freeNeighbour.size()));
         }
         return null;
+    }
+
+    @Override
+    public int getSenseRadius() {
+        return SENSE_RADIUS;
+    }
+
+    @Override
+    public List<Location> getSenseScopeRelativeLocation() {
+        return RELATIVE_SENSE_SCOPE;
     }
 }
