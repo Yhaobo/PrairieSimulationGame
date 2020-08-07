@@ -1,11 +1,10 @@
 package model.entity.biology.animal;
 
 import model.Field;
-import util.ConstantNum;
-import util.MyUtils;
 import model.entity.Location;
 import model.entity.biology.Biology;
 import model.interfaces.Cell;
+import util.ConstantNum;
 
 import java.awt.*;
 import java.util.ArrayList;
@@ -17,7 +16,7 @@ public class Wolf extends Animal {
     /**
      * 感官范围
      */
-    private static final List<Location> RELATIVE_SENSE_SCOPE = MyUtils.generateSenseSope(SENSE_RADIUS);
+    private static final List<Location> RELATIVE_SENSE_SCOPE = Field.getRelativeLocationList(SENSE_RADIUS);
 
     public Wolf() {
         this(0);

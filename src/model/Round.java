@@ -1,22 +1,19 @@
 package model;
 
+import controller.PrairieStory;
 import model.entity.Location;
 import model.entity.biology.Biology;
 import model.entity.biology.animal.Animal;
-import model.entity.biology.animal.Human;
 import model.entity.biology.animal.HumanPlayer;
 import model.entity.biology.animal.Wolf;
 import model.entity.biology.plant.Plant;
 import model.interfaces.Cell;
+import model.interfaces.Player;
 import view.View;
 
-import java.applet.Applet;
-import java.applet.AudioClip;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.CyclicBarrier;
-import java.util.concurrent.ThreadPoolExecutor;
 
 /**
  * 每一回合的处理
@@ -24,64 +21,22 @@ import java.util.concurrent.ThreadPoolExecutor;
 public class Round {
     private final Field field;
     private final View view;
-    /**
-     * 惨叫声
-     */
-    private static AudioClip screech;
-    /**
-     * 肚子好饿周星驰
-     */
-    private static AudioClip hungry;
-    /**
-     * 婴儿开心笑声
-     */
-    private static AudioClip laughter;
-    /**
-     * 背景音乐
-     */
-    private static AudioClip music;
-    /**
-     * 狼叫声
-     */
-    private static AudioClip wolfAudio;
-    /**
-     * 羊叫声
-     */
-    private static AudioClip sheepAudio;
 
     /**
      * 可用线程数
      */
-    private final int availableThreadTotal;
-
+    private final int availableThreadTotal = PrairieStory.threadPool.getMaximumPoolSize();
     /**
-     * 已废弃, 被Thread.yield()完美代替(性能翻倍)
-     * 用来防止并发带来的不一致性(每个线程执行到各自任务同步点的时候等待其他线程)
-     */
-    private CyclicBarrier cyclicBarrier;
-
-    /**
-     * 根据可用线程数来分配任务量(行)
+     * 根据可用线程数来分配任务量(行);
      */
     private final int rowPart;
 
-    public Round(Field field, View view, int availableThreadTotal) {
+    public Round(Field field, View view) {
         this.field = field;
         this.view = view;
-        this.availableThreadTotal = availableThreadTotal;
         this.rowPart = field.getHeight() / availableThreadTotal;
 //        this.cyclicBarrier = new CyclicBarrier(availableThreadTotal);
-        try {
-            music = Applet.newAudioClip(this.getClass().getResource("/resource/背景音乐.wav"));
-            music.loop();
-            screech = Applet.newAudioClip(this.getClass().getResource("/resource/惨叫声.wav"));
-            hungry = Applet.newAudioClip(this.getClass().getResource("/resource/肚子好饿周星驰.wav"));
-            laughter = Applet.newAudioClip(this.getClass().getResource("/resource/婴儿开心笑声.wav"));
-            wolfAudio = Applet.newAudioClip(this.getClass().getResource("/resource/狼叫声.wav"));
-            sheepAudio = Applet.newAudioClip(this.getClass().getResource("/resource/羊叫声.wav"));
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+
     }
 
     /**
@@ -89,7 +44,7 @@ public class Round {
      *
      * @param version 最新版本号
      */
-    public void oneRound(int version,ThreadPoolExecutor threadPoolExecutor) {
+    public void oneRoundByLoop(int version) {
         if (availableThreadTotal > 1) {
             /*
             并发执行
@@ -98,7 +53,7 @@ public class Round {
             // 将Field按行分割为availableThreadTotal个块, 每一块分配一个线程来执行
             for (int thread = 0; thread < availableThreadTotal; thread++) {
                 int i = thread;
-                threadPoolExecutor.execute(() -> {
+                PrairieStory.threadPool.execute(() -> {
                     int iPlusOne = i + 1;
                     int startRow = i * rowPart;
                     // 同步点(一般为任务的三分之一和三分之二两个位置)
@@ -110,13 +65,6 @@ public class Round {
                             /*
                             下面代码的功能已被Thread.yield()完美代替(性能翻倍)
                              */
-//                            try {
-//                                // 等待其他任务线程都执行了此方法才一起继续执行
-//                                cyclicBarrier.await();
-//
-//                            } catch (InterruptedException | BrokenBarrierException e) {
-//                                e.printStackTrace();
-//                            }
                             }
                             cellActionStrategy(row, col, version);
                         }
@@ -125,17 +73,56 @@ public class Round {
                 });
             }
             try {
-                // 当前线程等待任务线程都执行完之后才继续执行
+                // main线程等待任务线程都执行完之后才继续执行
                 countDownLatch.await();
                 // 每回合重置
 //            cyclicBarrier.reset();
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-
         } else {
             /*
-            非并发执行
+            串行执行
+            */
+            for (int row = 0; row < field.getHeight(); row++) {
+                for (int col = 0; col < field.getWidth(); col++) {
+                    cellActionStrategy(row, col, version);
+                }
+            }
+        }
+    }
+
+    /**
+     * 每一回合的处理
+     *
+     * @param version 最新版本号
+     */
+    public void oneRoundByPlayer(int version) {
+        if (availableThreadTotal > 1) {
+            /*
+            并发执行
+            */
+            // 将Field按行分割为availableThreadTotal个块, 每一块分配一个线程来执行
+            for (int thread = 0; thread < availableThreadTotal; thread++) {
+                int i = thread;
+                PrairieStory.threadPool.execute(() -> {
+                    int iPlusOne = i + 1;
+                    int startRow = i * rowPart;
+                    // 同步点(一般为任务的三分之一和三分之二两个位置)
+                    int syncPoint = startRow + (rowPart / 3);
+                    for (int row = startRow; row < (availableThreadTotal == iPlusOne ? field.getHeight() : rowPart * iPlusOne); row++) {
+                        for (int col = 0; col < field.getWidth(); col++) {
+                            if (row == syncPoint) {
+                                Thread.yield();
+                            }
+                            cellActionStrategy(row, col, version);
+                        }
+                    }
+                });
+            }
+        } else {
+            /*
+            串行执行
             */
             for (int row = 0; row < field.getHeight(); row++) {
                 for (int col = 0; col < field.getWidth(); col++) {
@@ -158,7 +145,7 @@ public class Round {
             if (biology instanceof Animal) {
                 //如果是动物
                 Animal animal = (Animal) biology;
-                if (!(animal instanceof HumanPlayer)) {
+                if (!(animal instanceof Player)) {
                     /*
                     move
                     注意: 移动之后位置改变了,不能用row和col来表示动物位置
@@ -178,15 +165,11 @@ public class Round {
                         //狼的捕食范围为周围两圈
                         Wolf wolf = (Wolf) animal;
                         List<Biology> listBiology = field.getNeighbour(animal.getRow(), animal.getColumn(), 2);
-//                            if (an instanceof Biology) {
-//                                listBiology.add((Biology) an);
-//                            }
-
                         if (!listBiology.isEmpty()) {
                             Biology prey = wolf.eat(listBiology);
                             if (prey != null) {
-                                if (prey instanceof Human) {
-//                                    screech.play();
+                                if (prey instanceof HumanPlayer) {
+                                    GameAudio.getScreech().play();
                                 }
                                 field.replace(wolf, prey);
                             }
@@ -204,7 +187,7 @@ public class Round {
                             if (prey != null) {
                                 field.replace(animal, prey);
                                 if (prey instanceof Wolf) {
-                                    wolfAudio.play();
+                                    GameAudio.getWolfAudio().play();
                                 }
                             }
                         }
@@ -216,25 +199,19 @@ public class Round {
                     if (baby != null) {
                         field.placeNewBiology(animal.getRow(), animal.getColumn(), baby);
                     }
+                } else {
+                    // player
+                    Player player = (Player) animal;
+                    // breed
+                    if (player.isBreedFlag()) {
+                        player.setBreedFlag(false);
+                        Cell baby = animal.breed();
+                        if (baby != null) {
+                            field.placeNewBiology(row, col, baby);
+                            GameAudio.getLaughter().play();
+                        }
+                    }
                 }
-//                else {//actor
-//                    // breed
-//                    Cell baby = animal.breed();
-//                    if (baby != null) {
-//                        field.placeRandomAdj(row, col, baby);
-//                        if (isContains.add(baby)) {
-//                            if (laughter != null) {
-//                                laughter.stop();
-//
-//
-//                            }
-//                            laughter.play();
-//                        }
-//                    }
-//                    if (((Actor) animal).getRemainingTime() == 1) {
-//                        hungry.play();
-//                    }
-//                }
             }
         } else if (biology != null && biology.isDie()) {
             /*
@@ -262,12 +239,5 @@ public class Round {
         }
     }
 
-    public void stopAudio() {
-        screech.stop();
-        hungry.stop();
-        laughter.stop();
-        music.stop();
-        wolfAudio.stop();
-        sheepAudio.stop();
-    }
+
 }

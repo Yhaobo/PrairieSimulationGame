@@ -1,12 +1,11 @@
 package model.entity.biology.animal;
 
 import model.Field;
-import util.ConstantNum;
-import util.MyUtils;
 import model.entity.Location;
 import model.entity.biology.Biology;
 import model.entity.biology.plant.Plant;
 import model.interfaces.Cell;
+import util.ConstantNum;
 
 import java.awt.*;
 import java.util.ArrayList;
@@ -20,7 +19,7 @@ public class Human extends Animal {
     /**
      * 感官范围内的相对位置
      */
-    private static final List<Location> RELATIVE_SENSE_SCOPE = MyUtils.generateSenseSope(SENSE_RADIUS);
+    private static final List<Location> RELATIVE_SENSE_SCOPE = Field.getRelativeLocationList(SENSE_RADIUS);
 
     public Human() {
         this(0);
@@ -76,7 +75,6 @@ public class Human extends Animal {
             } else if (i instanceof Plant) {
                 plants.add(i);
             }
-
         }
         if (!plants.isEmpty()) {
             //随机获取一只

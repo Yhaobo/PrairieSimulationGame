@@ -14,7 +14,11 @@ public enum ConstantNum {
     /**
      * 这个游戏中一年的天数
      */
-    , ONE_YEAR_DAYS(100);
+    , ONE_YEAR_DAYS(100)
+    /**
+     * 初始化最大的范围相对位置的值
+     */
+    , INIT_MAX_SCOPE_RELATIVE_LOCATION_NUMBER(10);
 
     public final int value;
 

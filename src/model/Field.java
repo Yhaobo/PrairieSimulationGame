@@ -3,9 +3,7 @@ package model;
 import model.entity.Location;
 import model.entity.biology.Biology;
 import model.entity.biology.animal.Animal;
-import model.entity.biology.animal.Human;
 import model.entity.biology.animal.Sheep;
-import model.entity.biology.animal.Wolf;
 import model.entity.biology.plant.Plant;
 import model.interfaces.Cell;
 import model.interfaces.Player;
@@ -35,27 +33,27 @@ public class Field implements Serializable {
      * 存档时才保存的版本号
      */
     private int version;
+    /**
+     * 游戏开始时间
+     */
+    private long gameStartTime = System.currentTimeMillis();
 
     /**
-     * 为了提高性能,把半径从1到Plant.BREED_SCOPE的相对位置都生成好
+     * 为了提高性能,把半径从1到指定值的范围相对位置的列表都生成好
      */
-    private static final List<List<Location>> RELATIVE_LOCATION_LISTS = new ArrayList<>(10);
+    private static final List<List<Location>> SCOPE_RELATIVE_LOCATION_LISTS = new ArrayList<>(ConstantNum.INIT_MAX_SCOPE_RELATIVE_LOCATION_NUMBER.value);
 
     static {
-        for (int i = 0; i < 10; i++) {
-            RELATIVE_LOCATION_LISTS.add(MyUtils.generateSenseSope(i + 1));
+        for (int i = 1; i <= ConstantNum.INIT_MAX_SCOPE_RELATIVE_LOCATION_NUMBER.value; i++) {
+            SCOPE_RELATIVE_LOCATION_LISTS.add(MyUtils.generateSenseSope(i));
         }
     }
 
-    public Field(int width, int height) {
+    public Field(int width, int height,Player player) {
         this.width = width;
         this.height = height;
         this.cells = new Cell[height][width];
-        try {
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        this.player = player;
     }
 
     public Player getPlayer() {
@@ -73,22 +71,23 @@ public class Field implements Serializable {
     public void init() {
         System.out.println("宽:" + width + "\t高:" + height);
         System.out.println("格子数: " + width * height);
-//        this.actor = actor;
         for (int row = 0; row < height; row++) {
             for (int col = 0; col < width; col++) {
                 double probability = Math.random();
-                if (probability < 0.001) {
-                    place(row, col, new Human((int) (Math.random() * ConstantNum.ONE_YEAR_DAYS.value)));
-                } else if (probability < 0.003) {
-                    place(row, col, new Wolf((int) (Math.random() * ConstantNum.ONE_YEAR_DAYS.value)));
-                } else if (probability < 0.03) {
+//                if (probability < 0.001) {
+//                    place(row, col, new Human((int) (Math.random() * ConstantNum.ONE_YEAR_DAYS.value)));
+//                } else
+//                    if (probability < 0.003) {
+//                    place(row, col, new Wolf((int) (Math.random() * ConstantNum.ONE_YEAR_DAYS.value)));
+//                } else
+                    if (probability < 0.01) {
                     place(row, col, new Sheep((int) (Math.random() * ConstantNum.ONE_YEAR_DAYS.value)));
                 } else {
                     place(row, col, new Plant((int) (Math.random() * ConstantNum.ONE_YEAR_DAYS.value)));
                 }
             }
         }
-        place(height / 2, width / 2, new Human());
+//        place(height / 2, width / 2, player);
     }
 
     public int getWidth() {
@@ -103,6 +102,9 @@ public class Field implements Serializable {
      * 放置格子(把动物放进去)
      */
     public void place(int row, int col, Cell cell) {
+        if (cell == null) {
+            return;
+        }
         cell.setLocation(row, col);
         place(cell);
     }
@@ -134,7 +136,7 @@ public class Field implements Serializable {
      */
     public List<Biology> getNeighbour(int row, int col, int radius) {
         List<Biology> list = new ArrayList<>((int) Math.pow((1 + radius * 2), 2) - 1);
-        List<Location> relativeLocations = RELATIVE_LOCATION_LISTS.get(radius - 1);
+        List<Location> relativeLocations = Field.getRelativeLocationList(radius);
         for (Location relativeLoc : relativeLocations) {
             int r = row + relativeLoc.getRow();
             int c = col + relativeLoc.getColumn();
@@ -143,7 +145,6 @@ public class Field implements Serializable {
                 list.add((Biology) cell);
             }
         }
-
         return list;
     }
 
@@ -156,7 +157,7 @@ public class Field implements Serializable {
      */
     public List<Location> getFreeAdjacentLocations(int row, int col, int radius) {
         ArrayList<Location> list = new ArrayList<>((int) Math.pow((1 + radius * 2), 2) - 1);
-        List<Location> relativeLocations = RELATIVE_LOCATION_LISTS.get(radius - 1);
+        List<Location> relativeLocations = Field.getRelativeLocationList(radius);
         for (Location relativeLoc : relativeLocations) {
             int r = row + relativeLoc.getRow();
             int c = col + relativeLoc.getColumn();
@@ -165,16 +166,6 @@ public class Field implements Serializable {
                 list.add(new Location(r, c));
             }
         }
-//        for (int i = -radius; i <= radius; i++) {
-//            for (int j = -radius; j <= radius; j++) {
-//                int r = row + i;
-//                int c = col + j;
-//                if (r >= 0 && r < height && c >= 0 && c < width && getCell(r, c) == null) {
-//                    // 位置不越界,且没有生物
-//                    list.add(new Location(r, c));
-//                }
-//            }
-//        }
         return list;
     }
 
@@ -187,7 +178,7 @@ public class Field implements Serializable {
      */
     public List<Location> getNeighbourLocation(int row, int col, int radius) {
         ArrayList<Location> list = new ArrayList<>((int) Math.pow((1 + radius * 2), 2) - 1);
-        List<Location> relativeLocations = RELATIVE_LOCATION_LISTS.get(radius - 1);
+        List<Location> relativeLocations = Field.getRelativeLocationList(radius);
         for (Location relativeLoc : relativeLocations) {
             int r = row + relativeLoc.getRow();
             int c = col + relativeLoc.getColumn();
@@ -196,16 +187,6 @@ public class Field implements Serializable {
                 list.add(new Location(r, c));
             }
         }
-//        for (int i = -1; i <= radius; i++) {
-//            for (int j = -1; j <= radius; j++) {
-//                int r = row + i;
-//                int c = col + j;
-//                if (r >= 0 && r < height && c >= 0 && c < width && !(i == 0 && j == 0) && !(getCell(r, c) instanceof Animal)) {
-//                    // 位置不越界,且没有动物
-//                    list.add(new Location(r, c));
-//                }
-//            }
-//        }
         return list;
     }
 
@@ -252,75 +233,6 @@ public class Field implements Serializable {
         hunter.setLocation(prey.getRow(), prey.getColumn());
         place(hunter);
     }
-//    public boolean actorMove(Actor actor, Location loc) {
-////        if (loc == null) {
-////            return false;
-////        }
-//        //判断actor有没有被吃掉,如果被吃掉则返回false
-//        if (actor.isAlive() && (getCell(actor.getRow(), actor.getColumn()) instanceof Actor)) {
-//            int rowLoc = loc.getRow();
-//            int colLoc = loc.getColumn();
-//            short eatWolf = 365;
-//            short eatSheep = 7;
-//            short eatPlant = 1;
-//            //actor的feed()的实现
-//            if (rowLoc > -1 && colLoc > -1 && rowLoc < height && colLoc < width && !(field[rowLoc][colLoc] instanceof Human)) {
-//                if (field[rowLoc][colLoc] instanceof Wolf) {
-//                    actor.longerLife(eatWolf, actor.MAX_LIFETIME);
-//                    wolfAudio.play();
-//                } else if (field[rowLoc][colLoc] instanceof Sheep) {
-//                    actor.longerLife(eatSheep, actor.MAX_LIFETIME);
-//                    if (sheepAudio != null) {
-//                        sheepAudio.stop();
-//                    }
-//                    sheepAudio.play();
-//                } else if (field[rowLoc][colLoc] instanceof Plant) {
-//                    actor.longerLife(eatPlant, actor.MAX_LIFETIME);
-//                }
-//                remove(actor.getRow(), actor.getColumn());
-//                actor.setLocation(loc.getRow(), loc.getColumn());
-//                field[rowLoc][colLoc] = actor;
-//                return true;
-//            }
-//            //空格键快速捕食
-//            if (rowLoc == -1 && colLoc == -1) {
-//                Cell[] cells = getNeighbour(actor.getRow(), actor.getColumn());
-//                boolean flag = false;// 避免吃完动物继续吃植物
-//                for (Cell cell : cells) {
-//                    if (cell instanceof Wolf) {
-//                        wolfAudio.play();
-//                        instead(actor, cell);
-//                        actor.longerLife(eatWolf, actor.MAX_LIFETIME);
-//                        flag = true;
-//                    } else if (cell instanceof Sheep) {
-//                        if (sheepAudio != null) {
-//                            sheepAudio.stop();
-//                        }
-//                        sheepAudio.play();
-//                        instead(actor, cell);
-//                        actor.longerLife(eatSheep, actor.MAX_LIFETIME);
-//                        flag = true;
-//                        break;
-//                    }
-//                }
-//                if (!flag) {
-//                    List<Cell> list = new ArrayList<>();
-//                    for (Cell cell : cells) {
-//                        if (cell instanceof Plant) {
-//                            list.add(cell);
-//                        }
-//                    }
-//                    if (list.size() > 0) {
-//                        Cell prey = list.get((int) (list.size() * Math.random()));
-//                        instead(actor, prey);
-//                        actor.longerLife(eatPlant, actor.MAX_LIFETIME);
-//                    }
-//                }
-//            }
-//            return true;
-//        }
-//        return false;
-//    }
 
     /**
      * 移动
@@ -335,5 +247,21 @@ public class Field implements Serializable {
         remove(animal);
         animal.setLocation(loc.getRow(), loc.getColumn());
         place(animal);
+    }
+
+    public long getGameStartTime() {
+        return gameStartTime;
+    }
+
+    public void setGameStartTime(long gameStartTime) {
+        this.gameStartTime = gameStartTime;
+    }
+
+    public static List<Location> getRelativeLocationList(int radius) {
+        return SCOPE_RELATIVE_LOCATION_LISTS.get(radius - 1);
+    }
+
+    public Location getCenterLocation() {
+        return new Location(height/2,width/2);
     }
 }

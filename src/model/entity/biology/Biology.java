@@ -3,7 +3,6 @@ package model.entity.biology;
 import model.entity.Location;
 import model.entity.biology.plant.Plant;
 import model.interfaces.Cell;
-import model.interfaces.Player;
 import util.ConstantNum;
 
 import java.util.concurrent.atomic.AtomicInteger;
@@ -47,7 +46,7 @@ public abstract class Biology implements Cell {
             return true;
         } else {
             if (version.get() != newVersion) {
-                System.out.println("版本控制异常,version=" + version + ",newVersion=" + newVersion);
+                System.out.println("版本控制异常,version=" + version + ",newVersion=" + newVersion + "\t" + getClass().getSimpleName());
                 version.set(newVersion);
             }
             return false;
@@ -89,9 +88,9 @@ public abstract class Biology implements Cell {
         if (this.isDie()) {
             return false;
         }
-        if (this instanceof Player || this instanceof Plant) {
+        if (this instanceof Plant) {
             aliveTime++;
-            // 玩家和植物寿命无限
+            // 植物寿命无限
             return true;
         }
         if (aliveTime++ > maxAliveTime || aliveTime > maxLifetime) {
@@ -103,6 +102,10 @@ public abstract class Biology implements Cell {
 
     public boolean isAlive() {
         return isAlive;
+    }
+
+    public void setAlive(boolean alive) {
+        isAlive = alive;
     }
 
     /**
